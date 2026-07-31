@@ -1,0 +1,8 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local backups / generated test output
+*.bak
+*.out
