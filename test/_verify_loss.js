@@ -1,16 +1,16 @@
 /* 校验脚本：验证第6页「辅耗可视化」损失链与引擎/计算表自洽 */
 const fs = require("fs");
 const path = require("path");
-const WIN = "E:/11 配置信息/v13_web BESS 配置器V_2.0_ 带仿真";
+const ROOT = path.join(__dirname, "..");
 
 // --- 载入 V12 数据源 ---
-const dataCode = fs.readFileSync(path.join(WIN, "data.js"), "utf8");
+const dataCode = fs.readFileSync(path.join(ROOT, "data.js"), "utf8");
 global.window = {};
 eval(dataCode);
 const V = global.window.V12;
 
 // --- 载入引擎 (Node module.exports) ---
-const ENG = require(path.join(WIN, "calc_engine.js"));
+const ENG = require(path.join(ROOT, "calc_engine.js"));
 
 function run(auxOverrides, label) {
   const state = ENG.createState(V, { aux: auxOverrides });

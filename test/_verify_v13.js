@@ -1,7 +1,7 @@
 /* V13 功能验证: 引擎加载 + M3 回退 + 捕获映射索引 */
 const fs = require('fs'), path = require('path'), vm = require('vm');
 global.window = global; global.document = undefined;
-const base = __dirname;
+const base = path.join(__dirname, "..");
 const load = (f) => vm.runInThisContext(fs.readFileSync(path.join(base, f), 'utf8'), { filename: f });
 load('models.js'); load('data_battery.js'); load('fitted.js'); load('sim.js');
 

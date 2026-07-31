@@ -1,4 +1,4 @@
-// 储能电池衰减模型库 M1-M5 (纯函数, 浏览器/Node 通用)
+// 储能电池衰减模型库 M1–M5 (纯函数, 浏览器/Node 通用) —— M1–M4 为参数模型, M5 为数据驱动经验多项式(系数来自 fitted.js)
 // 每个模型 fn(params, cond, y) 返回"容量损失 qloss"(相对初始容量的分数, >=0)
 // 最终 SOH = SOH0 - qloss ; RTE = RTE0 - kRTE * qloss
 (function (root) {
@@ -85,6 +85,19 @@
         const Tk = c.restTemp + 273.15;
         const arrh = Math.exp(-p[1] / (8.314 * Tk)) / Math.exp(-p[1] / (8.314 * 298.15));
         return Math.min(0.95, Math.max(0, p[0] * arrh * Math.pow(y, p[2]) * Math.pow(c.cyclesPerDay * c.dod, p[3])));
+      },
+    },
+    // M5 经验多项式(逐曲线)：数据驱动，不靠全局参数回归。
+    // 实际衰减取"最临近实测曲线"，用其三次多项式系数(来自 fitted.js 的 M.m5)；
+    // sim.js 在 computeSeries 中对 modelKey==='M5' 单独分支处理，此处仅作完整注册，使 MODELS 与 UI/文档(M1–M5)一致。
+    M5: {
+      key: "M5",
+      name: "经验多项式(逐曲线)",
+      desc: "数据驱动: 取最临近实测曲线，对其 SOH 衰减做三次拟合 loss = a0 + a1·y + a2·y² + a3·y³；系数来自 fitted.js 的 M.m5，不依赖全局回归。",
+      params: ["a0", "a1", "a2", "a3"],
+      init: [0, 0.01, 0, 0], lo: [0, 0, 0, 0], hi: [0.5, 0.5, 0.5, 0.5],
+      fn: function (p, c, y) {
+        return Math.min(0.95, Math.max(0, p[0] + p[1] * y + p[2] * y * y + p[3] * y * y * y));
       },
     },
   };

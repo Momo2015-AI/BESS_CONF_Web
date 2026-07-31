@@ -44,8 +44,9 @@
 
 默认工况 0.5P@25℃ N=1：综合效率 **O = 85.16%**，单循环辅耗 12371 kWh；五阶段损失链与引擎自洽（误差 < 1e-11），五因子分解 Σ = 100.00%，全部 PASS。
 
-## 已知可改进项
+## 测试与质量
 
-1. `_verify.js` 内的 `algo()` 复刻了旧版逻辑（无 adaptive 冷尾），建议改为直接 `require('./calc_engine.js')` 对拍生产代码。
-2. `_verify_loss.js` 硬编码了绝对路径，建议改用 `__dirname`。
-3. `models.js` 仅定义到 M4，但 UI 提及 M5（走 `fitted.js` 数据路径），命名易误解。
+- 校验脚本已归入 `test/`（`_verify.js` / `_verify_loss.js` / `_verify_v13.js`），由 `node test/run_all.js` 统一运行。
+- `_verify.js` 不再复刻逻辑，直接 `require('../calc_engine.js')` 对拍生产引擎（含 adaptive 冷尾）。
+- `_verify_loss.js` 路径基于 `__dirname`，换机不再失效（已移除硬编码 `E:/...` 绝对路径）。
+- `models.js` 的 `MODELS` 已补全 `M5`（数据驱动经验多项式，系数为 fitted 数据），与 UI/文档 M1–M5 一致。
