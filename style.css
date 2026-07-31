@@ -50,8 +50,8 @@
   --r-md: 14px;
   --r-lg: 16px;
 
-  --font-ui: "Plus Jakarta Sans", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", "SFMono-Regular", "Consolas", "Menlo", monospace;
+  --font-ui:  "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
+  --font-mono: "SFMono-Regular", "Consolas", "Menlo", "JetBrains Mono", monospace;
 
   --sidebar-w: 266px;
 }

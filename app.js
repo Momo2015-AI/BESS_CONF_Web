@@ -673,8 +673,8 @@
         else td.textContent = fmt(row[c.key], c.d);
       });
     });
-    // KPI
-    const r0 = table.rows[0];
+    // KPI — 取 SAT 行 (row4, Year0) 作为"投运首年"，与"首年"语义一致
+    const r0 = table.rows[1] || table.rows[0];
     setKpi("kpi-nom", fmt(state.inputs.nom, 1), "MWh");
     setKpi("kpi-epoc", fmt(state.inputs.epoc, 1), "MWh");
     setKpi("kpi-O", fmtPct(r0.O, 2), "");
@@ -1144,13 +1144,15 @@
 
     grid.innerHTML = fields.map(f => {
       const p = params[f.key] || {};
-      const val = p.value != null ? (f.fmt ? f.fmt(p.value) : String(p.value)) : "";
+      const rawVal = p.value != null ? (f.fmt ? f.fmt(p.value) : String(p.value)) : "";
+      const val = rawVal.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
       const conf = p.confidence || 0;
       const confCls = p.status === "inferred" ? "conf-inferred"
         : conf >= 80 ? "conf-high" : conf >= 50 ? "conf-medium" : conf > 0 ? "conf-low" : "";
       const confLabel = p.status === "inferred" ? "推断"
         : conf >= 80 ? "高" : conf >= 50 ? "中" : conf > 0 ? "低" : "";
       const reqStar = f.required ? '<span style="color:#C62828">*</span>' : "";
+      const sourceHtml = p.source ? ('来源: ' + String(p.source).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")) : "";
 
       return `<div class="modal-field ${f.key === "projectName" ? "full" : ""}">
         <label>${reqStar}${f.label}
@@ -1158,7 +1160,7 @@
           <span class="field-unit">${f.unit}</span>
         </label>
         <input type="text" data-key="${f.key}" value="${val}" placeholder="${f.required ? "必填" : "可选"}" />
-        ${p.source ? `<span class="field-source">来源: ${p.source}</span>` : ""}
+        ${sourceHtml ? `<span class="field-source">${sourceHtml}</span>` : ""}
       </div>`;
     }).join("");
 
@@ -1197,7 +1199,16 @@
     };
 
     for (const [pk, ik] of Object.entries(map)) {
-      if (merged[pk] != null) state.inputs[ik] = merged[pk];
+      if (merged[pk] != null) {
+        state.inputs[ik] = merged[pk];
+        // 同步联动对侧（双向）
+        for (const [pair, [a, b]] of Object.entries(V.linkPairs)) {
+          if (state.links[pair]) {
+            if (ik === a) state.inputs[b] = merged[pk];
+            else if (ik === b) state.inputs[a] = merged[pk];
+          }
+        }
+      }
     }
 
     // acAuxNoLoad: UI 是 kW, data 是 MW
@@ -1246,11 +1257,11 @@
           }
           text = pages.join("\n");
         } else {
-          // 降级方案: 尝试从二进制中提取可读文本
-          const bytes = new Uint8Array(arrayBuffer);
-          text = new TextDecoder("utf-8").decode(bytes);
-          // 过滤不可打印字符
-          text = text.replace(/[^\x20-\x7E\u4e00-\u9fff\u3000-\u303f\uff00-\uffef\n\r]/g, " ");
+          status.className = "modal-status warning";
+          status.innerHTML = "⚠ PDF 解析库未加载，请手动引入 pdfjs-dist 后再试，或手动输入参数";
+          $("modalGrid").innerHTML = "";
+          fileInput.value = "";
+          return;
         }
 
         // 使用简单的浏览器端正则提取 (复用 pdf_extract.js 的规则逻辑)
@@ -1352,7 +1363,7 @@
   // ---- 导出报告 (浏览器端) ----
   function handleExportReport() {
     // 浏览器端无法直接调用 Node.js 的 docx/exceljs
-    // 策略: 收集当前参数和计算结果, 触发下载 JSON, 提示用户用 CLI 生成
+    // 策略: 收集当前参数和计算结果, 触发下载 JSON+CSV
     const sys = computeAux();
     const tableResult = computeTable();
     const params = {};
@@ -1393,7 +1404,7 @@
     URL.revokeObjectURL(jsonUrl);
 
     // 提示
-    alert("已下载:\n• BESS_计算表.csv — 全站配置计算表\n• BESS_params.json — 参数文件\n\n如需生成 Word/Excel 正式报告，请在终端运行:\nnode .zcode/skills/bess-configurator/scripts/report_generate.js BESS_params.json");
+    alert("已下载:\n• BESS_计算表.csv — 全站配置计算表\n• BESS_params.json — 参数文件");
   }
 
   function init() {

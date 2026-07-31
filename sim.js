@@ -493,7 +493,8 @@
     renderKPIs(ser);
     badge(ser.source);
     var sohS = [buildSeries(ser, COL.soh, "SOH (" + $("algo").value + ")", "soh", false, 2.6)];
-    var rteS = ser.rte.some(function (v) { return v != null; }) ? [buildSeries(ser, COL.rte, "RTE", "rte", false, 2.2)] : [];
+    var rteArr = ser.rte || [];
+    var rteS = rteArr.some(function (v) { return v != null; }) ? [buildSeries(ser, COL.rte, "RTE", "rte", false, 2.2)] : [];
     renderChart(sohS, rteS);
     renderTable(ser);
   }
@@ -518,7 +519,8 @@
     rows += "</tbody>";
     $("cmpTbl").innerHTML = rows;
     $("cmpCard").style.display = "";
-    var rteS = exactSer && exactSer.rte.some(function (v) { return v != null; }) ? [buildSeries(exactSer, COL.rte, "RTE(精确)", "rte", false, 2.2)] : [];
+    var rteArr = exactSer && exactSer.rte || [];
+    var rteS = rteArr.some(function (v) { return v != null; }) ? [buildSeries(exactSer, COL.rte, "RTE(精确)", "rte", false, 2.2)] : [];
     renderChart(sohS, rteS);
     renderKPIs(exactSer || (sohS[0] && primSer));
     badge("算法对比: " + keys.length + " 个模型叠加 (见下表)");

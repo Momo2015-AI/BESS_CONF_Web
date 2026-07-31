@@ -46,9 +46,10 @@
     const eTailD = pTailD * tTail * frac + ps * tTail * (1 - frac);
     const Eaux = pChg * tAct + eTailC + ps * t3 + pDis * tAct + eTailD + ps * t6;
     const cycleH = 2 * tAct + 2 * tTail + tRest;
+    const warning = cycleH > 24 ? "单次循环时长(" + cycleH.toFixed(1) + "h) 超过 24h，当前倍率与每日循环数不匹配" : null;
     return { Eaux, avgKW: Eaux / cycleH, avgMW: Eaux / cycleH / 1000,
              pChg, pTailC, pDis, pTailD, ps, tAct, tTail, tRest, t3, t6, cycleH,
-             strategy, eTailC, eTailD };
+             strategy, eTailC, eTailD, warning };
   }
 
   // ---- AC 侧辅耗模型 ----
@@ -109,6 +110,8 @@
 
   // ---- 全站计算表 ----
   function computeTable(V, inputs, aux, deg, aug1, aug2, sohSrc, simOut) {
+    // 防护: 若派生量未计算，自动 derive，避免直接调用产出 NaN
+    if (inputs.nom == null) derive(V, inputs, aux);
     const sys = computeAux(V, inputs, aux);
     const I = inputs;
     const rteOv = (I.rteOverride !== "" && I.rteOverride != null) ? I.rteOverride : null;
@@ -175,7 +178,9 @@
     const f_aux   = Pno * aux_rel;
     const O = row.O;
     const named = f_dc + f_chg + f_dis + f_cable + f_aux;      // = 1 - O_model
-    const f_other = Math.max(0, (1 - O) - named);
+    const residual = (1 - O) - named;
+    // 容差: 极小浮点残差不截断，避免 Σ 偏离 1；仅当残差显著为负时截断
+    const f_other = Math.abs(residual) < 1e-12 ? residual : Math.max(0, residual);
     return {
       O: O, Pno: Pno,
       dc: f_dc, chg: f_chg, dis: f_dis, cable: f_cable,
