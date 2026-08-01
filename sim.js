@@ -436,6 +436,18 @@
     $("ctemp").value = (c.cycleTemp != null ? c.cycleTemp : (c.restTemp != null ? c.restTemp : 25));
     $("rtemp").value = (c.restTemp != null ? c.restTemp : 25);
     $("soc").value = ((c.restSOC != null ? c.restSOC : 0.5) * 100);
+    syncAuxT();
+  }
+
+  // 温度单向联动: 衰减仿真"运行温度 ctemp" → 辅耗模型环境温度 aux.T
+  // (衰减页在辅耗页之前, 用户在衰减页定工况温度后, 辅耗自动跟随, 避免两处不一致)
+  function syncAuxT() {
+    var V12 = window.__V12;
+    if (!V12) return;
+    var t = parseFloat($("ctemp").value);
+    if (!isFinite(t)) return;
+    V12.state.aux.T = t;
+    V12.recalc();
   }
 
   function buildSeries(ser, color, label, axis, dashed, w) {
@@ -485,6 +497,7 @@
   function doCalc() {
     $("cmpCard").style.display = "none";
     var inp = readInputs();
+    syncAuxT();
     var q = { rate: inp.rate, dod: inp.dod, cyclesPerDay: inp.cpd, cycleTemp: inp.ctemp, restTemp: inp.rtemp, restSOC: inp.soc };
     var ser = computeSeries($("algo").value, inp.name, inp.type, q, inp.soh0, inp.rte0, inp.years, inp.conv);
     storeSimOut(ser, inp);
@@ -581,6 +594,7 @@
   // 事件
   $("type").addEventListener("change", function () { fillModels(); fillPresets(); });
   $("model").addEventListener("change", function () { fillPresets(); });
+  $("ctemp").addEventListener("change", syncAuxT);
   $("btnCalc").addEventListener("click", doCalc);
   $("btnCompare").addEventListener("click", doCompare);
   $("btnMatch").addEventListener("click", doMatch);

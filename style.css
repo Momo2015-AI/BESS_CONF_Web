@@ -249,6 +249,7 @@ h1, h2, h3 { text-wrap: balance; }
 
 /* ---------- 表单 ---------- */
 .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(244px, 1fr)); gap: 16px 22px; }
+.form-grid > .field { min-width: 0; }
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field label { font-size: 12px; color: var(--ink); font-weight: 600; display: flex; justify-content: space-between; align-items: baseline; }
 .field label .f-unit { color: var(--muted); font-weight: 500; font-family: var(--font-mono); font-size: 11px; }
@@ -259,6 +260,8 @@ h1, h2, h3 { text-wrap: balance; }
   padding: 10px 13px; background: var(--surface); width: 100%;
   transition: border-color .25s var(--ease), box-shadow .25s var(--ease), background .25s var(--ease);
 }
+.field select { min-width: 0; }
+.field select:not([multiple]) { text-overflow: ellipsis; }
 .field input:focus, .field select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px rgba(46, 107, 242, 0.14); background: #fff; }
 .field input:disabled, .field input[readonly] {
   background: var(--surface-2); color: var(--live-ink); border-color: var(--line);

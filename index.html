@@ -19,8 +19,8 @@
     <nav class="nav" id="nav">
       <div class="nav-section">配置 · Configuration</div>
       <button class="nav-item active" data-page="inputs"><span class="ni-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span><span class="ni-cn">输入参数</span><span class="ni-en">Base Parameters</span></span></button>
-      <button class="nav-item" data-page="aux"><span class="ni-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/><line x1="19.07" y1="4.93" x2="4.93" y2="19.07"/><path d="M12 6v4m0 4v4M6 12h4m4 0h4"/></svg></span><span><span class="ni-cn">辅耗模型</span><span class="ni-en">Aux Model</span></span></button>
       <button class="nav-item" data-page="deg"><span class="ni-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg></span><span><span class="ni-cn">衰减曲线</span><span class="ni-en">Degradation</span></span></button>
+      <button class="nav-item" data-page="aux"><span class="ni-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/><line x1="19.07" y1="4.93" x2="4.93" y2="19.07"/><path d="M12 6v4m0 4v4M6 12h4m4 0h4"/></svg></span><span><span class="ni-cn">辅耗模型</span><span class="ni-en">Aux Model</span></span></button>
       <div class="nav-section">结果 · Results</div>
       <button class="nav-item" data-page="calc"><span class="ni-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg></span><span><span class="ni-cn">计算表格</span><span class="ni-en">Calculation</span></span></button>
       <button class="nav-item" data-page="formulas"><span class="ni-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 5V3H6v6l6 5-6 5v3h12v-2"/></svg></span><span><span class="ni-cn">公式说明</span><span class="ni-en">Formulas</span></span></button>
@@ -56,10 +56,7 @@
     <!-- ① 输入参数 -->
     <section class="page active" data-page="inputs" id="page-inputs"></section>
 
-    <!-- ② 辅耗模型 -->
-    <section class="page" data-page="aux" id="page-aux"></section>
-
-    <!-- ③ 衰减曲线：上半=仿真器，下半=原始数据(手动录入) -->
+    <!-- ② 衰减曲线：上半=仿真器，下半=原始数据(手动录入) -->
     <section class="page" data-page="deg" id="page-deg">
       <!-- 仿真器面板 -->
       <div id="sim-panel">
@@ -130,6 +127,9 @@
       <!-- 原始数据(手动录入)容器：由 app.js 的 renderDeg 填充 -->
       <div id="rawdeg-container"></div>
     </section>
+
+    <!-- ③ 辅耗模型 -->
+    <section class="page" data-page="aux" id="page-aux"></section>
 
     <!-- ④ 计算表格 -->
     <section class="page" data-page="calc" id="page-calc"></section>

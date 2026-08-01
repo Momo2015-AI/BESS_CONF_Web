@@ -479,15 +479,21 @@
     }
 
     // ② 各阶段时间 + 总功耗 (DC / AC / BESS, 参数化)
+    // 冷尾语义: 冷尾为时段, 强制冷却功率 pTail 恒定; 滑块(frac)控制其中强制冷却的时间占比
+    // 故冷尾拆为 强制冷却 tTail·frac (功率 pTail) + 自然冷却 tTail·(1-frac) (功率 ps), 时间拆分、功率不变
     const st = $("stagepower-table");
     if (st) {
+      const frac = sys.strategy === "adaptive" ? (state.aux.tailCoolFrac != null ? state.aux.tailCoolFrac : 0.30) : 1;
+      const tForced = sys.tTail * frac, tFree = sys.tTail * (1 - frac);
       const stages = [
-        { stage: "充电",       t: sys.tAct, dcpw: nC * sys.pChg   / 1000, acpw: sys.pac.chg },
-        { stage: "充冷尾",     t: sys.tTail, dcpw: nC * sys.pTailC / 1000, acpw: sys.pac.tail },
-        { stage: "静置(充后)", t: sys.t3,   dcpw: nC * sys.ps     / 1000, acpw: sys.pac.stby },
-        { stage: "放电",       t: sys.tAct, dcpw: nC * sys.pDis   / 1000, acpw: sys.pac.dis },
-        { stage: "放冷尾",     t: sys.tTail, dcpw: nC * sys.pTailD / 1000, acpw: sys.pac.tail },
-        { stage: "静置(放后)", t: sys.t6,   dcpw: nC * sys.ps     / 1000, acpw: sys.pac.stby }
+        { stage: "充电",         t: sys.tAct,  dcpw: nC * sys.pChg   / 1000, acpw: sys.pac.chg },
+        { stage: "充冷尾·强制",  t: tForced,   dcpw: nC * sys.pTailC / 1000, acpw: sys.pac.tail },
+        { stage: "充冷尾·自然",  t: tFree,     dcpw: nC * sys.ps     / 1000, acpw: sys.pac.stby },
+        { stage: "静置(充后)",   t: sys.t3,    dcpw: nC * sys.ps     / 1000, acpw: sys.pac.stby },
+        { stage: "放电",         t: sys.tAct,  dcpw: nC * sys.pDis   / 1000, acpw: sys.pac.dis },
+        { stage: "放冷尾·强制",  t: tForced,   dcpw: nC * sys.pTailD / 1000, acpw: sys.pac.tail },
+        { stage: "放冷尾·自然",  t: tFree,     dcpw: nC * sys.ps     / 1000, acpw: sys.pac.stby },
+        { stage: "静置(放后)",   t: sys.t6,    dcpw: nC * sys.ps     / 1000, acpw: sys.pac.stby }
       ];
       let dcTot = 0, acTot = 0;
       const trs = stages.map(s => {
@@ -1231,7 +1237,11 @@
     if (merged.acAuxNoLoad != null) {
       state.inputs.acAuxNoLoad = merged.acAuxNoLoad >= 0.1 ? merged.acAuxNoLoad / 1000 : merged.acAuxNoLoad;
     }
-    if (merged.ambientTemp != null) state.aux.T = merged.ambientTemp;
+    if (merged.ambientTemp != null) {
+      state.aux.T = merged.ambientTemp;
+      // 温度单向联动: 同步回衰减仿真面板"运行温度 ctemp", 保证两处一致
+      const ce = $("ctemp"); if (ce) ce.value = String(merged.ambientTemp);
+    }
     if (merged.cRate != null) state.aux.r = merged.cRate;
     if (merged.cyclePerDay != null) state.aux.N = Math.round(merged.cyclePerDay);
 
