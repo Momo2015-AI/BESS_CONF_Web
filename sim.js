@@ -467,9 +467,7 @@
   }
   function renderTable(ser) {
     var h = "<thead><tr><th>年限</th><th>SOH</th><th>衰减%</th><th>RTE</th></tr></thead><tbody>";
-    var maxY = ser.years[ser.years.length - 1];
     ser.years.forEach(function (y, i) {
-      if (y % Math.ceil(maxY / 20) !== 0 && y !== 0 && y !== maxY) return;
       var rte = ser.rte[i] != null ? (ser.rte[i] * 100).toFixed(2) + "%" : "—";
       h += "<tr><td>Y" + y + "</td><td>" + (ser.soh[i] * 100).toFixed(2) + "%</td><td>" + ((1 - ser.soh[i]) * 100).toFixed(2) + "%</td><td>" + rte + "</td></tr>";
     });

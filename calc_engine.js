@@ -119,12 +119,19 @@
     const rows = deg.map(y => {
       let H = y.H;
       let K = rteOv != null ? rteOv : y.K;
+      let srcFallback = false;
       if (SIM) {
-        if (y.row === 3) { H = 1.0; if (SIM.rte && SIM.rte[0] != null) K = SIM.rte[0]; }
-        else if (y.row === 4) { H = 0.9925; if (SIM.rte && SIM.rte[0] != null) K = SIM.rte[0]; }
-        else {
+        // 取仿真逐年 soh/rte；FAT(出厂) 与 SAT(投运首年/Year0) 均对应仿真 Y0 = soh[0]
+        // 仿真年限不足的行回退原始衰减表，并标记 srcFallback 供 UI 提示
+        const simH = SIM.soh && SIM.soh[0] != null ? SIM.soh[0] : null;
+        const simR = SIM.rte && SIM.rte[0] != null ? SIM.rte[0] : null;
+        if (y.row === 3 || y.row === 4) {
+          if (simH != null) { H = simH; } else { srcFallback = true; }
+          if (simR != null) K = simR;
+        } else {
           const yi = y.row - 4;
           if (yi >= 0 && yi < SIM.soh.length && SIM.soh[yi] != null) H = SIM.soh[yi];
+          else srcFallback = true;
           if (SIM.rte && yi >= 0 && yi < SIM.rte.length && SIM.rte[yi] != null) K = SIM.rte[yi];
         }
       }
@@ -138,7 +145,7 @@
       const Nin = H_avail / (K * I.cable * I.effChg);
       const O = (Mout - sys.P_dis_sys * sys.t_dis) / (Nin + sys.E_cycle_sys - sys.P_dis_sys * sys.t_dis);
       const Pno = K * I.effChg * I.effDis * I.cable * I.cable;
-      return { row: y.row, label: y.label, H, K, C, D,
+      return { row: y.row, label: y.label, H, K, C, D, srcFallback,
         aug1: aug1[y.row] || 0, aug2: aug2[y.row] || 0,
         H_avail, I: I.epoc, J, Kc, L, Mout, Nin, O, Pno };
     });

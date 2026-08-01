@@ -680,6 +680,22 @@
     setKpi("kpi-O", fmtPct(r0.O, 2), "");
     setKpi("kpi-M", fmt(r0.Mout, 1), "MWh");
     setKpi("kpi-E", fmt(table.sys.E_cycle_sys, 3), "MWh");
+    updateSrcHint(table);
+  }
+  function updateSrcHint(table) {
+    const hint = document.querySelector(".src-toggle-hint");
+    if (!hint) return;
+    if (state.sohSrc !== "sim") { hint.textContent = "（使用 V12 原始衰减表）"; return; }
+    const sim = window.__SIMOUT;
+    if (!sim) { hint.textContent = "（仿真尚未计算，请先在衰减页运行一次）"; return; }
+    let msg = "（仿真：" + sim.source + "）";
+    const fb = table.rows.filter(r => r.srcFallback);
+    if (fb.length) {
+      const first = Math.min.apply(null, fb.map(r => r.row));
+      const last = Math.max.apply(null, fb.map(r => r.row));
+      msg += " ⚠ 仿真年限不足，第 " + (first - 4) + "~" + (last - 4) + " 年已沿用原始衰减表";
+    }
+    hint.textContent = msg;
   }
   function setKpi(id, val, unit) {
     const e = $(id); if (!e) return;
