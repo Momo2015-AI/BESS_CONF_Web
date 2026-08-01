@@ -414,16 +414,18 @@
     const oc = el("div", "aux-cards"); oc.id = "aux-cards"; obody.appendChild(oc);
     ocard.appendChild(obody); page.appendChild(ocard);
 
-    // 矩阵区 —— DC 实测矩阵 + AC 模型推算矩阵 (移到最下面)
+    // 矩阵区 —— DC 实测矩阵 + AC 模型推算矩阵 并排两列
     const mats = [["充电功率 chg", "chg"], ["冷却尾流(充) tailC", "tailC"], ["放电功率 dis", "dis"], ["冷却尾流(放) tailD", "tailD"]];
-    page.appendChild(buildMatrixCard(
+    const mc = el("div", "two-col");
+    mc.appendChild(buildMatrixCard(
       "实测功率矩阵 · DC 侧",
       "kW/箱 · T 方向分段线性 + r 方向双线性",
       mats, (k, ri, ci) => V.M[k][ri][ci], k => riMat(V.M[k], state.aux.T, state.aux.r), "interp", true));
-    page.appendChild(buildMatrixCard(
+    mc.appendChild(buildMatrixCard(
       "模型推算辅耗矩阵 · AC 侧",
       "kW/箱 · 空载 + 负载% (形状随 r/T, 与 DC 同相)",
       mats, (k, ri, ci) => acMatrixValue(k, V.Tgrid[ci], V.Rgrid[ri]), k => acMatrixValue(k, state.aux.T, state.aux.r), "acinterp"));
+    page.appendChild(mc);
 
     page.appendChild(el("div", "note-bar",
       "说明：<b>工况输入</b>的 r / T / mode / N 实时驱动下方所有卡片。<b>单机各阶段功耗</b>给出每箱（kW/箱）在六个阶段的 DC 冷却与 AC 变流器/变压器损耗。<b>各阶段时间 DC 与 AC 完全相同</b>——同一运行周期两侧测量，时间仅由 r / N 决定。<b>总功耗</b>按箱数（系统 DC = 箱数×单箱环能）与 SKID 数（AC）计算，参数化、适配任意项目规模。底层功率矩阵置于最下方供核对。"));
