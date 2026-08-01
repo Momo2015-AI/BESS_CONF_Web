@@ -196,12 +196,22 @@
   }
 
   /* ---------------- 功率矩阵表 (DC / AC 同构) ---------------- */
-  function buildMatrixCard(title, en, keys, valueFn, interpFn, idp) {
-    const mcard = el("div", "section-card");
+  function buildMatrixCard(title, en, keys, valueFn, interpFn, idp, collapsed) {
+    const mcard = el("div", "section-card" + (collapsed ? " collapsed" : ""));
     const mhead = el("div", "section-head");
     mhead.appendChild(el("span", "sh-dot"));
     mhead.appendChild(el("h2", null, title));
     mhead.appendChild(el("span", "sh-en", en));
+    const toggle = el("button", "sh-toggle link-toggle off", ICONS.chev);
+    toggle.setAttribute("aria-label", "折叠");
+    toggle.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const isCollapsed = mcard.classList.toggle("collapsed");
+      toggle.classList.toggle("on", !isCollapsed);
+      toggle.classList.toggle("off", isCollapsed);
+      toggle.setAttribute("aria-label", isCollapsed ? "展开" : "折叠");
+    });
+    mhead.appendChild(toggle);
     mcard.appendChild(mhead);
     const mbody = el("div", "section-body");
     keys.forEach(([title, key]) => {
@@ -409,7 +419,7 @@
     page.appendChild(buildMatrixCard(
       "实测功率矩阵 · DC 侧",
       "kW/箱 · T 方向分段线性 + r 方向双线性",
-      mats, (k, ri, ci) => V.M[k][ri][ci], k => riMat(V.M[k], state.aux.T, state.aux.r), "interp"));
+      mats, (k, ri, ci) => V.M[k][ri][ci], k => riMat(V.M[k], state.aux.T, state.aux.r), "interp", true));
     page.appendChild(buildMatrixCard(
       "模型推算辅耗矩阵 · AC 侧",
       "kW/箱 · 空载 + 负载% (形状随 r/T, 与 DC 同相)",
