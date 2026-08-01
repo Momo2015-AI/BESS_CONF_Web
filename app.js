@@ -389,7 +389,7 @@
     pcard.appendChild(phead);
     const pbody = el("div", "section-body");
     const pgrid = el("div", "percont"); pgrid.id = "percont-grid"; pbody.appendChild(pgrid);
-    pcard.appendChild(pbody); page.appendChild(pcard);
+    pcard.appendChild(pbody);
 
     // ② 各阶段时间 & 总功耗 (DC / AC / BESS, 参数化)
     const spcard = el("div", "section-card");
@@ -401,7 +401,13 @@
     const spbody = el("div", "section-body");
     const sptable = el("div", "tbl-wrap"); sptable.id = "stagepower-table"; spbody.appendChild(sptable);
     const sptotals = el("div", "aux-cards totals"); sptotals.id = "stagepower-totals"; spbody.appendChild(sptotals);
-    spcard.appendChild(spbody); page.appendChild(spcard);
+    spcard.appendChild(spbody);
+
+    // 并排两列
+    const twocol = el("div", "two-col");
+    twocol.appendChild(pcard);
+    twocol.appendChild(spcard);
+    page.appendChild(twocol);
 
     // 系统级分相位输出卡
     const ocard = el("div", "section-card");
