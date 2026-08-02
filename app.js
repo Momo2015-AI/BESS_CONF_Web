@@ -541,15 +541,18 @@
     const head = el("div", "section-head");
     head.appendChild(el("span", "sh-dot"));
     head.appendChild(el("h2", null, "原始数据 · 年度衰减曲线"));
-    head.appendChild(el("span", "sh-en", "SOH(H) / DC-RTE(K) · V12 手动数据，可直接编辑或粘贴"));
-    head.appendChild(el("span", "sh-note", "支持从 Excel 复制整列粘贴"));
+    head.appendChild(el("span", "sh-en", "SOH(H) / DC-RTE(K) · V12 手动数据"));
     card.appendChild(head);
     const body = el("div", "section-body");
     const wrap = el("div", "tbl-wrap");
     const t = el("table", "tbl");
     const thead = el("thead"); const htr = el("tr");
-    ["年份<br>Year", "SOH 衰减率 (H)", "直流往返效率 (K)"].forEach((h, i) => {
-      const th = el("th", i === 0 ? "yearcol" : null, h); thead.appendChild(th);
+    [
+      { cn: "年份<br>Year", cls: "yearcol" },
+      { cn: 'SOH (H)<span class="th-en">衰减率</span>', cls: null },
+      { cn: 'DC-RTE (K)<span class="th-en">往返效率</span>', cls: null }
+    ].forEach((h) => {
+      const th = el("th", h.cls, h.cn); thead.appendChild(th);
     });
     thead.appendChild(htr); t.appendChild(thead);
     const tb = el("tbody"); degTableBody = tb;

@@ -478,10 +478,10 @@
     $("kpis").innerHTML = html;
   }
   function renderTable(ser) {
-    var h = "<thead><tr><th>年限</th><th>SOH</th><th>衰减%</th><th>RTE</th></tr></thead><tbody>";
+    var h = '<thead><tr><th class="yearcol">年限<br>Year</th><th>SOH<span class="th-en">衰减率</span></th><th>衰减<span class="th-en">Delta</span></th><th>RTE<span class="th-en">往返效率</span></th></tr></thead><tbody>';
     ser.years.forEach(function (y, i) {
       var rte = ser.rte[i] != null ? (ser.rte[i] * 100).toFixed(2) + "%" : "—";
-      h += "<tr><td>Y" + y + "</td><td>" + (ser.soh[i] * 100).toFixed(2) + "%</td><td>" + ((1 - ser.soh[i]) * 100).toFixed(2) + "%</td><td>" + rte + "</td></tr>";
+      h += '<tr><td class="yearcol">Y' + y + '</td><td class="num">' + (ser.soh[i] * 100).toFixed(2) + '%</td><td class="num">' + ((1 - ser.soh[i]) * 100).toFixed(2) + '%</td><td class="num">' + rte + '</td></tr>';
     });
     h += "</tbody>";
     $("tbl").innerHTML = h;
@@ -518,7 +518,7 @@
     var colors = { EXACT: COL.exact, M1: COL.c1, M2: COL.c2, M3: COL.c3, M4: COL.c4, M5: COL.c5 };
     var labels = { EXACT: "表内精确", M1: "M1 线性", M2: "M2 双指数", M3: "M3 平方根", M4: "M4 Arrhenius", M5: "M5 经验" };
     var sohS = [], exactSer = null, primSer = null;
-    var rows = "<thead><tr><th>算法</th><th>来源</th><th>Y5</th><th>Y10</th><th>Y20</th><th>RMSE</th></tr></thead><tbody>";
+    var rows = '<thead><tr><th class="yearcol">算法</th><th>来源</th><th>Y5<span class="th-en">5年</span></th><th>Y10<span class="th-en">10年</span></th><th>Y20<span class="th-en">20年</span></th><th>RMSE<span class="th-en">拟合误差</span></th></tr></thead><tbody>';
     keys.forEach(function (k) {
       var ser = computeSeries(k, inp.name, inp.type, q, inp.soh0, inp.rte0, inp.years, inp.conv);
       if (k === "EXACT") exactSer = ser;
