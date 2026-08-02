@@ -125,8 +125,11 @@
         // 仿真年限不足的行回退原始衰减表，并标记 srcFallback 供 UI 提示
         const simH = SIM.soh && SIM.soh[0] != null ? SIM.soh[0] : null;
         const simR = SIM.rte && SIM.rte[0] != null ? SIM.rte[0] : null;
-        if (y.row === 3 || y.row === 4) {
-          if (simH != null) { H = simH; } else { srcFallback = true; }
+        if (y.row === 3) {
+          H = 1.0; // FAT = 出厂新电池，H 固定为 1.0
+          if (simR != null) K = simR;
+        } else if (y.row === 4) {
+          H = 0.9925; // SAT = 投运首年 (出厂后运输/安装调试损耗)
           if (simR != null) K = simR;
         } else {
           const yi = y.row - 4;

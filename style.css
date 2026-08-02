@@ -250,6 +250,9 @@ h1, h2, h3 { text-wrap: balance; }
 .kpi .k-label::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); flex: 0 0 7px; }
 .kpi.k-teal .k-label::before { background: var(--teal); box-shadow: 0 0 0 3px var(--teal-soft); }
 .kpi.k-amber .k-label::before { background: var(--amber); box-shadow: 0 0 0 3px var(--amber-soft); }
+.kpi.k-ok .k-label::before { background: #1B8A4B; box-shadow: 0 0 0 3px rgba(27,138,75,.25); }
+.kpi.k-fail .k-label::before { background: #D32F2F; box-shadow: 0 0 0 3px rgba(211,47,47,.25); }
+.kpi.k-fail .k-val { color: #D32F2F; }
 .kpi .k-en { font-size: 10px; color: var(--muted); opacity: .75; letter-spacing: .02em; margin-top: 2px; }
 .kpi .k-val { font-family: var(--font-mono); font-size: 24px; font-weight: 600; margin-top: 8px; letter-spacing: -.6px; color: var(--ink); }
 .kpi .k-val small { font-size: 12px; color: var(--muted); font-weight: 500; margin-left: 3px; }

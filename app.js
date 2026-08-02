@@ -620,7 +620,8 @@
       <div class="kpi"><div class="k-label">并网保证容量</div><div class="k-en">Usable @AC (PoC)</div><div class="k-val tnum" id="kpi-epoc">—<small>MWh</small></div></div>
       <div class="kpi k-teal"><div class="k-label">综合效率(含辅耗) 首年</div><div class="k-en">AC-RTE w/ Aux</div><div class="k-val tnum" id="kpi-O">—</div></div>
       <div class="kpi k-teal"><div class="k-label">最大输出@PoC 首年</div><div class="k-en">Max OUTPUT @PoC</div><div class="k-val tnum" id="kpi-M">—<small>MWh</small></div></div>
-      <div class="kpi k-amber"><div class="k-label">整循环系统辅耗</div><div class="k-en">E_cycle_sys</div><div class="k-val tnum" id="kpi-E">—<small>MWh</small></div></div>`;
+      <div class="kpi k-amber"><div class="k-label">整循环系统辅耗</div><div class="k-en">E_cycle_sys</div><div class="k-val tnum" id="kpi-E">—<small>MWh</small></div></div>
+      <div class="kpi" id="kpi-contract-wrap"><div class="k-label">合同保证容量满足率</div><div class="k-en">Mout ≥ epoc 通过年数</div><div class="k-val tnum" id="kpi-contract">—</div></div>`;
     page.appendChild(strip);
 
     // 衰减数据来源切换: 来自仿真 / 来自原始数据
@@ -704,6 +705,23 @@
     setKpi("kpi-O", fmtPct(r0.O, 2), "");
     setKpi("kpi-M", fmt(r0.Mout, 1), "MWh");
     setKpi("kpi-E", fmt(table.sys.E_cycle_sys, 3), "MWh");
+    // 合同保证容量校验: Mout(year) ≥ epoc
+    const epoc = state.inputs.epoc;
+    const passRows = table.rows.filter(r => r.Mout >= epoc);
+    const failCount = table.rows.length - passRows.length;
+    const contractEl = $("kpi-contract");
+    if (contractEl) {
+      const wrap = contractEl.closest(".kpi");
+      if (failCount === 0) {
+        contractEl.innerHTML = table.rows.length + '<small> / ' + table.rows.length + ' 年</small>';
+        wrap.classList.add("k-ok");
+        wrap.classList.remove("k-fail");
+      } else {
+        contractEl.innerHTML = table.rows.length - failCount + '<small> / ' + table.rows.length + ' 年 (差' + failCount + '年)</small>';
+        wrap.classList.add("k-fail");
+        wrap.classList.remove("k-ok");
+      }
+    }
     updateSrcHint(table);
   }
   function updateSrcHint(table) {
