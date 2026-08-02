@@ -428,7 +428,7 @@
       "kW/箱 · T 方向分段线性 + r 方向双线性",
       mats, (k, ri, ci) => V.M[k][ri][ci], k => riMat(V.M[k], state.aux.T, state.aux.r), "interp", true));
     mc.appendChild(buildMatrixCard(
-      "模型推算辅耗矩阵 · AC 侧",
+      "模型推算矩阵 · AC 侧",
       "kW/箱 · 空载 + 负载% (形状随 r/T, 与 DC 同相)",
       mats, (k, ri, ci) => acMatrixValue(k, V.Tgrid[ci], V.Rgrid[ri]), k => acMatrixValue(k, state.aux.T, state.aux.r), "acinterp"));
     page.appendChild(mc);

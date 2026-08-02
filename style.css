@@ -222,8 +222,12 @@ h1, h2, h3 { text-wrap: balance; }
 .section-head.collapsed .sh-toggle { transform: rotate(-90deg); }
 .sh-toggle {
   margin-left: auto; width: 18px; height: 18px; flex: 0 0 18px;
-  transition: transform .25s var(--ease);
+  border: none; background: transparent; padding: 0; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: transform .25s var(--ease); color: var(--muted);
 }
+.sh-toggle:hover { color: var(--ink); }
+.sh-toggle svg { width: 16px; height: 16px; flex: none; }
 .section-card.collapsed .section-body { display: none; }
 .section-card.collapsed .section-head { border-bottom-color: transparent; border-radius: var(--r-lg) var(--r-lg) 0 0; }
 .section-head .sh-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
@@ -561,6 +565,7 @@ table.matrix td.interp { background: var(--accent-soft); color: var(--accent-ink
 
 /* ---------- 仿真双栏 ---------- */
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.two-col.three { grid-template-columns: 1fr 1.1fr 1fr; }
 .two-col .section-card { margin-bottom: 0; }
 .table-wrap { overflow-x: auto; }
 .data-tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }

@@ -112,7 +112,7 @@
           <div class="section-body"><div class="chart-wrap"><canvas id="chart"></canvas></div></div>
         </div>
 
-        <div class="two-col">
+        <div class="two-col three">
           <div class="section-card">
             <div class="section-head"><h2>逐年结果 · SOH / RTE</h2></div>
             <div class="section-body"><div class="table-wrap"><table id="tbl" class="data-tbl"></table></div></div>
@@ -121,12 +121,10 @@
             <div class="section-head"><h2>算法对比 · Cross-check</h2></div>
             <div class="section-body"><div class="table-wrap"><table id="cmpTbl" class="data-tbl"></table></div></div>
           </div>
+          <!-- 原始数据(手动录入)容器：由 app.js 的 renderDeg 填充 -->
+          <div id="rawdeg-container"></div>
         </div>
       </div>
-
-      <!-- 原始数据(手动录入)容器：由 app.js 的 renderDeg 填充 -->
-      <div id="rawdeg-container"></div>
-    </section>
 
     <!-- ③ 辅耗模型 -->
     <section class="page" data-page="aux" id="page-aux"></section>
