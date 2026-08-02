@@ -93,7 +93,7 @@
     const page = $("page-inputs");
     page.innerHTML = "";
     inputGroups.forEach(g => {
-      const card = el("div", "section-card");
+      const card = el("div", "section-card reveal");
       const head = el("div", "section-head");
       head.appendChild(el("span", "sh-dot"));
       head.appendChild(el("h2", null, g.title));
@@ -437,6 +437,16 @@
       "说明：<b>工况输入</b>的 r / T / mode / N 实时驱动下方所有卡片。<b>单机各阶段功耗</b>给出每箱（kW/箱）在六个阶段的 DC 冷却与 AC 变流器/变压器损耗。<b>各阶段时间 DC 与 AC 完全相同</b>——同一运行周期两侧测量，时间仅由 r / N 决定。<b>总功耗</b>按箱数（系统 DC = 箱数×单箱环能）与 SKID 数（AC）计算，参数化、适配任意项目规模。底层功率矩阵置于最下方供核对。"));
   }
 	  function updateAux() {
+	    // 温度联动显示同步: 衰减页 ctemp 更新后, 辅耗页温度下拉按钮文本跟随
+	    // (makeDropdown 的 applyValue 只处理用户手动操作, 程序化 state.aux.T 修改需在此刷新)
+	    const tBtn = $("aux-T");
+	    if (tBtn) {
+	      const fmtT = (v) => (Number.isInteger(v) ? String(v) : v.toFixed(2).replace(/\.?0+$/, ""));
+	      const tLbl = tBtn.querySelector(".dd-lbl");
+	      if (tLbl) tLbl.textContent = fmtT(state.aux.T);
+	      const cust = tBtn.parentElement.querySelector(".dd-cust input");
+	      if (cust) cust.value = V.tOptions.some(v => Number(v) === Number(state.aux.T)) ? "" : String(state.aux.T);
+	    }
 	    // 冷尾策略 UI 联动
 	    const csSel = $("aux-coolStrategy");
 	    if (csSel && csSel.value !== state.aux.coolStrategy) csSel.value = state.aux.coolStrategy;

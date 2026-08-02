@@ -269,14 +269,15 @@ h1, h2, h3 { text-wrap: balance; }
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field label { font-size: 12px; color: var(--ink); font-weight: 600; display: flex; justify-content: space-between; align-items: baseline; }
 .field label .f-unit { color: var(--muted); font-weight: 500; font-family: var(--font-mono); font-size: 11px; }
-.field .f-en { font-size: 10.5px; color: var(--muted); }
+.field .f-en { font-size: 10.5px; color: var(--muted); min-height: 24px; display: flex; align-items: center; }
+.field .f-en-row { min-height: 24px; }
 .field input, .field select {
   font-family: var(--font-mono); font-size: 13.5px; color: var(--ink);
   border: 1px solid var(--line-strong); border-radius: 12px;
   padding: 10px 13px; background: var(--surface); width: 100%;
   transition: border-color .25s var(--ease), box-shadow .25s var(--ease), background .25s var(--ease);
 }
-.field select { min-width: 0; }
+.field select { min-width: 0; height: 38px; line-height: 1.2; }
 .field select:not([multiple]) { text-overflow: ellipsis; }
 .field input:focus, .field select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px rgba(46, 107, 242, 0.14); background: #fff; }
 .field input:disabled, .field input[readonly] {

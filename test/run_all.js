@@ -5,7 +5,7 @@ const { spawnSync } = require("child_process");
 const path = require("path");
 
 const here = __dirname;
-const scripts = ["_verify.js", "_verify_loss.js", "_verify_v13.js"];
+const scripts = ["_verify.js", "_verify_loss.js", "_verify_v13.js", "_verify_dataflow.js"];
 let allOk = true;
 
 for (const s of scripts) {

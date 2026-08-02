@@ -121,10 +121,10 @@
       let K = rteOv != null ? rteOv : y.K;
       let srcFallback = false;
       if (SIM) {
-        // 取仿真逐年 soh/rte；FAT(出厂) 与 SAT(投运首年/Year0) 均对应仿真 Y0 = soh[0]
+        // 取仿真逐年 soh；FAT(出厂) 与 SAT(投运首年/Year0) 均对应仿真 Y0 = soh[0]
         // 仿真年限不足的行回退原始衰减表，并标记 srcFallback 供 UI 提示
-        const simH = SIM.soh && SIM.soh[0] != null ? SIM.soh[0] : null;
-        const simR = SIM.rte && SIM.rte[0] != null ? SIM.rte[0] : null;
+        // rteOverride 为全局覆盖, 优先级最高: 设置后 K 恒为覆盖值, 不受 sim/raw 影响
+        const simR = (rteOv == null) ? (SIM.rte && SIM.rte[0] != null ? SIM.rte[0] : null) : null;
         if (y.row === 3) {
           H = 1.0; // FAT = 出厂新电池，H 固定为 1.0
           if (simR != null) K = simR;
@@ -135,7 +135,7 @@
           const yi = y.row - 4;
           if (yi >= 0 && yi < SIM.soh.length && SIM.soh[yi] != null) H = SIM.soh[yi];
           else srcFallback = true;
-          if (SIM.rte && yi >= 0 && yi < SIM.rte.length && SIM.rte[yi] != null) K = SIM.rte[yi];
+          if (rteOv == null && SIM.rte && yi >= 0 && yi < SIM.rte.length && SIM.rte[yi] != null) K = SIM.rte[yi];
         }
       }
       const C = I.nom;
