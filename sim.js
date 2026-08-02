@@ -496,6 +496,7 @@
 
   function doCalc() {
     $("cmpCard").style.display = "none";
+    $("degGrid").classList.remove("show-cmp");
     var inp = readInputs();
     syncAuxT();
     var q = { rate: inp.rate, dod: inp.dod, cyclesPerDay: inp.cpd, cycleTemp: inp.ctemp, restTemp: inp.rtemp, restSOC: inp.soc };
@@ -530,6 +531,7 @@
     rows += "</tbody>";
     $("cmpTbl").innerHTML = rows;
     $("cmpCard").style.display = "";
+    $("degGrid").classList.add("show-cmp");
     var rteArr = exactSer && exactSer.rte || [];
     var rteS = rteArr.some(function (v) { return v != null; }) ? [buildSeries(exactSer, COL.rte, "RTE(精确)", "rte", false, 2.2)] : [];
     renderChart(sohS, rteS);
