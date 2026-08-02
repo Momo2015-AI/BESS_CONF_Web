@@ -497,6 +497,7 @@ table.matrix td.interp { background: var(--accent-soft); color: var(--accent-ink
 
 .note-bar { font-size: 11.5px; color: var(--muted); background: var(--accent-soft); border: 1px solid #D4E4FD; border-radius: 12px; padding: 11px 14px; line-height: 1.6; }
 .note-bar b { color: var(--accent-ink); }
+.section-body > .note-bar { margin-top: 14px; }
 
 /* 单机各阶段功耗卡 (kW/箱) */
 .percont { display: flex; flex-direction: column; gap: 2px; }
@@ -581,8 +582,10 @@ table.matrix td.interp { background: var(--accent-soft); color: var(--accent-ink
 .algo-note { margin-top: 12px; font-size: 12px; color: var(--muted); min-height: 16px; line-height: 1.5; }
 .cap-note { margin-top: 10px; font-size: 12.5px; font-weight: 600; color: var(--live-ink); min-height: 16px; line-height: 1.5; }
 
-/* 原始数据容器与仿真面板之间的分隔留白 */
-#rawdeg-container { margin-top: 26px; }
+/* 原始数据容器现在是 degGrid 的网格单元，与逐年结果/算法对比并排 */
+#rawdeg-container { min-width: 0; display: flex; flex-direction: column; }
+#rawdeg-container .section-card { flex: 1; display: flex; flex-direction: column; }
+#rawdeg-container .section-card .section-body { flex: 1; overflow-y: auto; }
 
 /* ---------- 计算表: 衰减数据来源切换 ---------- */
 .src-toggle { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: var(--surface); border-radius: var(--r-md); box-shadow: var(--bezel-sm); padding: 12px 16px; margin-bottom: 18px; }
