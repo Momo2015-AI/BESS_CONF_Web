@@ -1097,7 +1097,7 @@
     inputs:   { cn: "输入参数", en: "Base Parameters", ey: "Configuration" },
     aux:      { cn: "辅耗模型", en: "Aux Model", ey: "Auxiliary Load" },
     deg:      { cn: "衰减曲线", en: "Degradation", ey: "Degradation" },
-    calc:     { cn: "计算表格", en: "System Configuration", ey: "Calculation" },
+    calc:     { cn: "仿真计算", en: "System Configuration", ey: "Calculation" },
     formulas: { cn: "公式说明", en: "Formula Reference", ey: "Formulas" },
     loss:     { cn: "辅耗可视化", en: "Aux Loss Chain", ey: "Loss Chain" }
   };
