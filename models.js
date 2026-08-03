@@ -195,11 +195,11 @@
     const slope = den !== 0 ? (n * sxy - sx * sy) / den : 0; // 斜率(rte vs loss, 通常为负)
     let kRTE = -slope;                                        // 模型系数需为正
     let RTE0 = (sy - slope * sx) / n;                         // loss=0 时的 RTE
-    // 约束合理范围
-    if (RTE0 > 0.99) RTE0 = 0.99;
-    if (RTE0 < 0.85) RTE0 = 0.85;
+    // 约束合理范围（放宽: 原 [0.85,0.99]/[0,0.5] 会把真实值裁成 artifact，如 S4-0.5P）
+    if (RTE0 > 1.00) RTE0 = 1.00;
+    if (RTE0 < 0.80) RTE0 = 0.80;
     if (kRTE < 0) kRTE = 0;
-    if (kRTE > 0.5) kRTE = 0.5;
+    if (kRTE > 1.0) kRTE = 1.0;
     return { RTE0: RTE0, kRTE: kRTE };
   }
 
