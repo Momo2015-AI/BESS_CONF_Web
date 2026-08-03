@@ -579,7 +579,7 @@
     });
     t.appendChild(tb); wrap.appendChild(t); body.appendChild(wrap);
     body.appendChild(el("div", "note-bar",
-      "提示：在任一单元格 <b>Ctrl/Cmd+V</b> 粘贴 Excel 复制的 TSV（年份列将被忽略，仅取 SOH、K 两列数值）。改动后计算表格与趋势图即时联动。下方仿真面板计算后，可点「捕获到原始数据」把曲线写入本表。"));
+      "提示：在任一单元格 <b>Ctrl/Cmd+V</b> 粘贴 Excel 复制的 TSV（年份列将被忽略，仅取 SOH、K 两列数值）。改动后仿真计算与趋势图即时联动。下方仿真面板计算后，可点「捕获到原始数据」把曲线写入本表。"));
     card.appendChild(body); container.appendChild(card);
 
     // 粘贴处理
