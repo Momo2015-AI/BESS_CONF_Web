@@ -248,6 +248,16 @@
       usedConv = true;
       source = "M" + modelKey.slice(1) + " 默认参数×系统转化系数(拟合发散回退)";
     }
+    // M1 发散守卫: 若 Ac·Ne(1)(首年纯循环损失)过大，该直拟参数在此工况会触顶 0.95 钳位使曲线"假死"，回退 M1 默认参数
+    if (modelKey === "M1" && params) {
+      var _qc = API.cond(q), _ne1 = API.Ne(_qc, 1);
+      var _cyc1 = params[1] * _ne1 * Math.pow(_qc.rate / 0.5, params[2]);
+      if (isFin(_cyc1) && _cyc1 > 0.5) {
+        params = DEFAULT_PARAMS.M1;
+        usedConv = true;
+        source = "M1 默认参数×系统转化系数(发散守卫: Ac·Ne(1)=" + _cyc1.toFixed(3) + ")";
+      }
+    }
     soh = years.map(function (yy) {
       var s = SOH0 - md.fn(params, q, yy);
       if (usedConv) s = s * conv;
