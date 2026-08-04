@@ -54,20 +54,25 @@
         return Math.min(0.95, Math.max(0, knee * Math.pow(c.rate / 0.5, p[4]) * Math.exp((c.restTemp - 25) / p[5])));
       },
     },
-    // M3 平方根模型 (Wang/Cui): sqrt(吞吐) + sqrt(时间·Arrh·SOC)
+    // M3 平方根模型 (Wang/Cui): sqrt(吞吐·Arrhenius循环) + sqrt(时间·Arrh日历·单调SOC)
+    // 温度用完整 Arrhenius 归一(25℃): exp(q·(1/298.15 − 1/Tk)), q=Ea/R(K)；
+    // 循环损伤取 cycleTemp(缺省回退 restTemp), 日历损伤取 restTemp；SOC 项单调递增(高SOC衰减更快)。
     M3: {
       key: "M3",
       name: "平方根(Wang/Cui)",
-      desc: "qloss = Ac·√Ne·f(倍率) + At·√(y·exp((T-25)/q)·(1+b·ΔSOC²))",
+      desc: "qloss = Ac·√Ne·(rate/0.5)^kr·exp(q·(1/298.15−1/Tcyc)) + At·√(y·exp(q·(1/298.15−1/Trest))·(1+b·(SOC−0.5)))",
       params: ["Ac", "kr", "At", "q", "b"],
-      init: [0.003, 0.1, 0.004, 12, 1.0],
-      lo: [1e-4, -1.0, 1e-5, 2.0, -2.0],
-      hi: [0.03, 2.0, 0.05, 40, 5.0],
+      init: [0.003, 0.1, 0.004, 5000, 1.0],
+      lo: [1e-4, -1.0, 1e-5, 500, -2.0],
+      hi: [0.03, 2.0, 0.05, 20000, 5.0],
       fn: function (p, c, y) {
         c = cond(c);
         const ne = Ne(c, y);
-        const cyc = p[0] * Math.sqrt(ne) * Math.pow(c.rate / 0.5, p[1]);
-        const cal = p[2] * Math.sqrt(y * Math.exp((c.restTemp - 25) / p[3]) * (1 + p[4] * Math.pow(c.restSOC - 0.5, 2)));
+        const Tref = 298.15;
+        const cycT = (c.cycleTemp != null ? c.cycleTemp : c.restTemp) + 273.15;
+        const restT = c.restTemp + 273.15;
+        const cyc = p[0] * Math.sqrt(ne) * Math.pow(c.rate / 0.5, p[1]) * Math.exp(p[3] * (1 / Tref - 1 / cycT));
+        const cal = p[2] * Math.sqrt(y * Math.exp(p[3] * (1 / Tref - 1 / restT)) * (1 + p[4] * (c.restSOC - 0.5)));
         return Math.min(0.95, Math.max(0, cyc + cal));
       },
     },

@@ -75,7 +75,7 @@
   var DEFAULT_PARAMS = {
     M1: [0.05, 1.2e-5, 0.5, 0.005, 15, 1.0],
     M2: [0.05, 500, 0.5, 60000, 0.2, 12],
-    M3: [0.003, 0.2, 0.01, 15, 1.0],
+    M3: [0.003, 0.2, 0.01, 5000, 1.0],
     M4: [0.03, 45000, 0.6, 0.5]
   };
 
@@ -99,7 +99,7 @@
     var curves = [], m5 = [], sysFit = [];
     keys.forEach(function (k) {
       var arr = rawArr[k] || [], mm = (FIT.m5 && FIT.m5[k]) || [], sf = (FIT.system && FIT.system[k]) || null;
-      arr.forEach(function (cv, i) { curves.push(cv); m5.push(mm[i]); sysFit.push(sf); });
+      arr.forEach(function (cv, i) { curves.push(cv); m5.push(mm[i]); sysFit.push(sf ? sf[i] : null); });
     });
     return { single: false, keys: keys, curves: curves, m5: m5, cellFit: null, sysFit: sysFit };
   }
@@ -163,6 +163,30 @@
     return best;
   }
 
+  // M5 外推守卫: 三次多项式超出实测区间可能翘曲 (SOH 回升 / 末段斜率发散), 判断是否可信
+  // 规则: ① 全区间衰减量单调不减(SOH 不回升); ② 实测段之后年均损失率不超过
+  //      "实测段末斜率×3 或 绝对 6%/年" 中的较大者 (发散 → 判定不可信, 回退 M3)
+  function isSaneM5Extrapolate(coeffs, cv, maxYear) {
+    var maxYData = 0;
+    (cv.points || []).forEach(function (p) { if (p.soh != null && isFin(p.y) && p.y > maxYData) maxYData = p.y; });
+    var yEnd = Math.max(maxYear, maxYData);
+    var d0 = coeffs[1] + 2 * coeffs[2] * maxYData + 3 * coeffs[3] * maxYData * maxYData;
+    var cap = Math.max(0.06, 3 * Math.max(0, d0));
+    var prevLoss = null;
+    for (var yy = 0; yy <= yEnd; yy++) {
+      var loss = API.m5loss(coeffs, yy);
+      if (!isFin(loss)) return false;
+      if (prevLoss != null && loss < prevLoss - 1e-9) return false;
+      if (yy > maxYData && yy > 0) {
+        var dL = coeffs[1] + 2 * coeffs[2] * yy + 3 * coeffs[3] * yy * yy;
+        if (dL < -1e-9) return false;
+        if (dL > cap) return false;
+      }
+      prevLoss = loss;
+    }
+    return true;
+  }
+
   // ---------- 核心计算 ----------
   function computeSeries(modelKey, name, type, q, SOH0, RTE0, maxYear, conv) {
     var M = resolveName(type, name);
@@ -185,17 +209,19 @@
     if (modelKey === "M5") {
       var m = nearestM5(M.curves, M.m5, q);
       if (m) {
-        soh = years.map(function (yy) { return clamp(SOH0 - API.m5loss(m.coeffs, yy), 0, 1); });
-        var rcv = m.cv, ptsR2 = cleanPts(rcv.points, "rte");
-        if (ptsR2.length) {
-          rte = years.map(function (yy) { return interpPts(ptsR2, yy); });
-        } else {
-          rte = modelRTE(type, name, q, null, soh, SOH0, RTE0);
+        if (isSaneM5Extrapolate(m.coeffs, m.cv, maxYear)) {
+          soh = years.map(function (yy) { return clamp(SOH0 - API.m5loss(m.coeffs, yy), 0, 1); });
+          var rcv = m.cv, ptsR2 = cleanPts(rcv.points, "rte");
+          if (ptsR2.length) {
+            rte = years.map(function (yy) { return interpPts(ptsR2, yy); });
+          } else {
+            rte = modelRTE(type, name, q, null, soh, SOH0, RTE0);
+          }
+          source = "M5 经验多项式(最近曲线)";
+          return { years: years, soh: soh, rte: rte, source: source, exactRef: null };
         }
-        source = "M5 经验多项式(最近曲线)";
-        return { years: years, soh: soh, rte: rte, source: source, exactRef: null };
       }
-      modelKey = "M3"; // 优化(M2→M3): 原 M1 改为 M3 — M3(√) 在实测曲线上聚合 RMSE 显著更低
+      modelKey = "M3"; // 守卫回退 / 优化(M2→M3): 原 M1 改为 M3 — M3(√) 在实测曲线上聚合 RMSE 显著更低
     }
 
     // ---- M1–M4 ----
@@ -232,7 +258,10 @@
   }
 
   function modelRTE(type, name, q, rteFit, soh, SOH0, RTE0) {
-    var k = rteFit ? rteFit.kRTE : (type === "cell" ? 0.03 : 0.06);
+    // kRTE 优先取曲线自带拟合; 缺失时取全库拟合(FIT.rte.kRTE), 仅当两者皆无才回退硬编码
+    var k = rteFit ? rteFit.kRTE
+      : (FIT.rte && isFin(FIT.rte.kRTE)) ? FIT.rte.kRTE
+      : (type === "cell" ? 0.03 : 0.06);
     var r0 = rteFit ? rteFit.RTE0 : RTE0;
     if (!(r0 > 0)) r0 = RTE0;
     return soh.map(function (s) { return clamp(r0 - k * (SOH0 - s), 0, 1); });
