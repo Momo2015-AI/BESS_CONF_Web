@@ -430,7 +430,7 @@
     mc.appendChild(buildMatrixCard(
       "模型推算矩阵 · AC 侧",
       "kW/箱 · 空载 + 负载% (形状随 r/T, 与 DC 同相)",
-      mats, (k, ri, ci) => acMatrixValue(k, V.Tgrid[ci], V.Rgrid[ri]), k => acMatrixValue(k, state.aux.T, state.aux.r), "acinterp"));
+      mats, (k, ri, ci) => acMatrixValue(k, V.Tgrid[ci], V.Rgrid[ri]), k => acMatrixValue(k, state.aux.T, state.aux.r), "acinterp", true));
     page.appendChild(mc);
 
     page.appendChild(el("div", "note-bar",
