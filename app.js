@@ -27,7 +27,7 @@
 	    aug1: Object.assign({}, V.augDefault), // {row: MWh}
 	    aug2: {},
 	    links: Object.assign({}, V.linksDefault), // AC↔DC 联动开关
-	    sohSrc: "raw" // "raw"=用原始衰减表 / "sim"=用仿真输出(__SIMOUT)
+	    sohSrc: "raw" // "raw"=用手工数据表 / "sim"=用仿真输出(__SIMOUT)
 	  };
   // 派生量(运行时计算)
   state.inputs.auxAC = 0; state.inputs.nom = 0;
@@ -541,16 +541,16 @@
     }
   }
 
-  /* ---------------- 衰减曲线页 · 原始数据表 (仿真面板见 #sim-panel) ---------------- */
+  /* ---------------- 衰减曲线页 · 手工数据表 (仿真面板见 #sim-panel) ---------------- */
   let degTableBody = null;
   function renderDeg() {
-    // V13: 顶部仿真面板(#sim-panel)为静态 HTML, 原始数据表单独渲染到 #rawdeg-container
+    // V13: 顶部仿真面板(#sim-panel)为静态 HTML, 手工数据表单独渲染到 #rawdeg-container
     const container = $("rawdeg-container") || $("page-deg");
     container.innerHTML = "";
     const card = el("div", "section-card");
     const head = el("div", "section-head");
     head.appendChild(el("span", "sh-dot"));
-    head.appendChild(el("h2", null, "原始数据 · 年度衰减曲线"));
+    head.appendChild(el("h2", null, "手工数据 · 年度衰减曲线"));
     head.appendChild(el("span", "sh-en", "SOH(H) / DC-RTE(K) · V12 手动数据"));
     card.appendChild(head);
     const body = el("div", "section-body");
@@ -579,7 +579,7 @@
     });
     t.appendChild(tb); wrap.appendChild(t); body.appendChild(wrap);
     body.appendChild(el("div", "note-bar",
-      "提示：在任一单元格 <b>Ctrl/Cmd+V</b> 粘贴 Excel 复制的 TSV（年份列将被忽略，仅取 SOH、K 两列数值）。改动后仿真计算与趋势图即时联动。下方仿真面板计算后，可点「捕获到原始数据」把曲线写入本表。"));
+      "提示：在任一单元格 <b>Ctrl/Cmd+V</b> 粘贴 Excel 复制的 TSV（年份列将被忽略，仅取 SOH、K 两列数值）。改动后计算表格与趋势图即时联动。仿真面板为只读参照，不会覆盖本表。"))
     card.appendChild(body); container.appendChild(card);
 
     // 粘贴处理
@@ -637,7 +637,7 @@
       <div class="kpi" id="kpi-contract-wrap"><div class="k-label">合同保证容量满足率</div><div class="k-en">Mout ≥ epoc 通过年数</div><div class="k-val tnum" id="kpi-contract">—</div></div>`;
     page.appendChild(strip);
 
-    // 衰减数据来源切换: 来自仿真 / 来自原始数据
+    // 衰减数据来源切换: 来自仿真 / 来自手工数据
     const togg = el("div", "src-toggle");
     const srcLabel = el("span", "src-toggle-label", "衰减数据来源");
     togg.appendChild(srcLabel);
@@ -649,7 +649,7 @@
       lab.appendChild(inp); lab.appendChild(el("span", null, txt));
       return lab;
     };
-    togg.appendChild(mk("raw", "来自原始数据"));
+    togg.appendChild(mk("raw", "来自手工数据"));
     togg.appendChild(mk("sim", "来自仿真"));
     const srcHint = el("span", "src-toggle-hint", "");
     togg.appendChild(srcHint);
@@ -740,7 +740,7 @@
   function updateSrcHint(table) {
     const hint = document.querySelector(".src-toggle-hint");
     if (!hint) return;
-    if (state.sohSrc !== "sim") { hint.textContent = "（使用 V12 原始衰减表）"; return; }
+    if (state.sohSrc !== "sim") { hint.textContent = "（使用手工数据表）"; return; }
     const sim = window.__SIMOUT;
     if (!sim) { hint.textContent = "（仿真尚未计算，请先在衰减页运行一次）"; return; }
     let msg = "（仿真：" + sim.source + "）";
@@ -1511,7 +1511,7 @@
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") document.querySelectorAll(".dd-menu.open").forEach(m => m.classList.remove("open"));
     });
-    // 暴露给挂载的仿真器 (sim.js): 捕获到原始数据 / 来源切换 / 重算
+    // 暴露给挂载的仿真器 (sim.js): 温度联动 / 来源切换 / 重算
     window.__V12 = { state: state, renderDeg: renderDeg, recalc: recalc, setSrc: setSrc };
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);

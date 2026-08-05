@@ -1,7 +1,7 @@
 /* =========================================================================
  * 衰减仿真器 (挂载版) — 嵌入 V13 衰减曲线页
  * 基于 battery_degradation_web 引擎 (models.js/data_battery.js/fitted.js)
- * 适配: 控件在 #sim-panel 内, 计算后写 window.__SIMOUT, 提供"捕获到原始数据"
+ * 适配: 控件在 #sim-panel 内, 计算后写 window.__SIMOUT, 供计算表格页以"来自仿真"切换
  * 优化(M2→M3): EXACT→M5→M1 回退改为 EXACT→M5→M3, 并加拟合发散守卫
  * ========================================================================= */
 (function () {
@@ -596,27 +596,8 @@
     }
   }
 
-  // 一键捕获: 把当前仿真结果写入 V12 原始数据表 (year1..25), FAT/SAT 锚点保留
-  function captureToRaw() {
-    var s = window.__SIMOUT;
-    var V12 = window.__V12;
-    if (!s || !V12) { alert("请先在上方计算一次仿真结果，再捕获。"); return; }
-    var deg = V12.state.deg;
-    deg.forEach(function (y) {
-      if (y.row === 3) { y.H = 1.0; if (s.rte && s.rte[0] != null) y.K = s.rte[0]; }
-      else if (y.row === 4) { y.H = 0.9925; if (s.rte && s.rte[0] != null) y.K = s.rte[0]; }
-      else {
-        var yi = y.row - 4; // Year 索引: row5(Year1) -> 1
-        if (yi >= 0 && yi < s.soh.length && s.soh[yi] != null) y.H = s.soh[yi];
-        if (s.rte && yi >= 0 && yi < s.rte.length && s.rte[yi] != null) y.K = s.rte[yi];
-      }
-    });
-    V12.setSrc("raw");      // 捕获后"原始数据"即等于仿真, 来源回到 raw
-    V12.renderDeg();        // 重绘原始数据表
-    V12.recalc();           // 计算表格即时联动
-    var note = $("capNote");
-    if (note) note.textContent = "已捕获仿真（" + s.source + "）到原始数据表 · FAT/SAT 锚点保留。";
-  }
+  // 一键捕获已移除: 手工数据表为用户手动录入的实测数据(数据源), 仿真为只读参照,
+  // 不再把仿真结果写回手工数据表。仿真结果仅写入 __SIMOUT 供计算表格页"来自仿真"切换使用。
 
   // 暴露计算核心 (供 node 单元测试复用, 防止逻辑漂移)
   function resizeChart() { if (chartInst) { try { chartInst.resize(); } catch (e) {} } }
@@ -639,7 +620,6 @@
   $("btnCalc").addEventListener("click", doCalc);
   $("btnCompare").addEventListener("click", doCompare);
   $("btnMatch").addEventListener("click", doMatch);
-  $("btnCaptureSim").addEventListener("click", captureToRaw);
   presetSel.addEventListener("change", function () { if (this.value !== "") applyPreset(parseInt(this.value)); });
 
   // 初始化

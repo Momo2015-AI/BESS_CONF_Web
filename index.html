@@ -56,7 +56,7 @@
     <!-- ① 输入参数 -->
     <section class="page active" data-page="inputs" id="page-inputs"></section>
 
-    <!-- ② 衰减曲线：上半=仿真器，下半=原始数据(手动录入) -->
+    <!-- ② 衰减曲线：上半=仿真器，下半=手工数据(手动录入) -->
     <section class="page" data-page="deg" id="page-deg">
       <!-- 仿真器面板 -->
       <div id="sim-panel">
@@ -98,10 +98,8 @@
               <button id="btnCalc" class="btn btn-primary" type="button">计算</button>
               <button id="btnCompare" class="btn btn-ghost" type="button">算法对比</button>
               <button id="btnMatch" class="btn btn-ghost" type="button">取匹配初值</button>
-              <button id="btnCaptureSim" class="btn btn-primary" type="button">一键捕获到原始数据</button>
             </div>
             <div class="algo-note" id="algoNote"></div>
-            <div class="cap-note" id="capNote"></div>
           </div>
         </div>
 
@@ -121,7 +119,7 @@
             <div class="section-head"><span class="sh-dot"></span><h2>算法对比 · Cross-check</h2><span class="sh-en">多模型逐年 SOH 对比</span></div>
             <div class="section-body"><div class="table-wrap"><table id="cmpTbl" class="tbl"></table></div></div>
           </div>
-          <!-- 原始数据(手动录入)容器：由 app.js 的 renderDeg 填充 -->
+          <!-- 手工数据(手动录入)容器：由 app.js 的 renderDeg 填充 -->
           <div id="rawdeg-container"></div>
         </div>
       </div>
