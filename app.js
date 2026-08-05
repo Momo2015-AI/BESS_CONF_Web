@@ -1178,7 +1178,7 @@
     tagReveal();
   }
 
-  /* ---------------- PDF 导入 & 参数确认弹窗 ---------------- */
+  /* ---------------- 需求导入 & 参数确认弹窗 ---------------- */
   let extractedParams = null; // 暂存提取的参数
 
   function showModal(params, meta) {
@@ -1301,45 +1301,43 @@
     switchPage("inputs");
   }
 
-  function handlePDFImport() {
-    const fileInput = $("pdfFileInput");
+  function handleReqImport() {
+    const fileInput = $("reqFileInput");
     fileInput.onchange = async (e) => {
       const file = e.target.files[0];
       if (!file) return;
 
       // 显示加载状态
       const status = $("modalStatus");
-      $("modalParams").style.display = "flex";
-      $("modalGrid").innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted)">⏳ 正在解析 PDF，请稍候...</div>';
-      status.className = "modal-status";
-      status.innerHTML = "⏳ 正在提取参数...";
+      const grid = $("modalGrid");
+      const showLoading = (msg) => {
+        $("modalParams").style.display = "flex";
+        grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted)">⏳ ${msg}...</div>`;
+        status.className = "modal-status";
+        status.innerHTML = "⏳ 正在提取参数...";
+      };
 
       try {
-        // 使用 pdf-parse 库 (需要 CDN 或本地引入)
-        // 浏览器端: 使用 pdfjs-dist 或发送到后端
-        // 这里使用内置的 FileReader + 简单文本匹配作为轻量方案
-        const arrayBuffer = await file.arrayBuffer();
-
-        // 尝试使用 pdfjs-dist (如果已加载)
+        const ext = (file.name.split(".").pop() || "").toLowerCase();
         let text = "";
-        if (window.pdfjsLib) {
-          const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-          const pages = [];
-          for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const content = await page.getTextContent();
-            pages.push(content.items.map(item => item.str).join(" "));
-          }
-          text = pages.join("\n");
+        if (ext === "pdf") {
+          showLoading("正在解析 PDF");
+          text = await parsePdf(file);
+        } else if (ext === "docx") {
+          showLoading("正在解析 Word(.docx)");
+          text = await parseDocx(file);
+        } else if (["png","jpg","jpeg","webp","bmp"].includes(ext)) {
+          showLoading("正在 OCR 识别图片");
+          text = await parseImage(file);
+        } else if (ext === "doc") {
+          showLoading("正在解析 Word(.doc 老格式)");
+          text = await parseDocLegacy(file);
         } else {
-          status.className = "modal-status warning";
-          status.innerHTML = "⚠ PDF 解析库未加载，请手动引入 pdfjs-dist 后再试，或手动输入参数";
-          $("modalGrid").innerHTML = "";
-          fileInput.value = "";
-          return;
+          throw new Error(`不支持的文件类型 .${ext}`);
         }
+        if (!text || !text.trim()) throw new Error("未提取到任何文本内容");
 
-        // 使用简单的浏览器端正则提取 (复用 pdf_extract.js 的规则逻辑)
+        // 复用浏览器端正则提取 (pdf_extract.js 规则逻辑)
         const params = extractParamsFromText(text);
         const summary = summarizeExtraction(params);
 
@@ -1347,14 +1345,83 @@
 
       } catch (err) {
         status.className = "modal-status error";
-        status.innerHTML = `✗ PDF 解析失败: ${err.message}<br><small>请尝试使用文本格式的 PDF，或手动输入参数</small>`;
-        $("modalGrid").innerHTML = "";
+        status.innerHTML = `✗ 解析失败: ${err.message}<br><small>请尝试文本型 PDF / .docx / 清晰图片，或手动输入参数</small>`;
+        grid.innerHTML = "";
       }
 
       // 重置 file input
       fileInput.value = "";
     };
     fileInput.click();
+  }
+
+  // 动态加载外部库 (CDN)，离线时给出明确报错
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const key = "__lib_" + src;
+      if (window[key]) return resolve();
+      const s = document.createElement("script");
+      s.src = src;
+      s.onload = () => { window[key] = true; resolve(); };
+      s.onerror = () => reject(new Error("无法加载 " + src + "，请检查网络或手动引入该库"));
+      document.head.appendChild(s);
+    });
+  }
+
+  // PDF: 使用 pdfjs-dist 提取每页文本
+  async function parsePdf(file) {
+    if (!window.pdfjsLib) {
+      await loadScript("https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js");
+    }
+    const pdf = await window.pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+    const pages = [];
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      pages.push(content.items.map(item => item.str).join(" "));
+    }
+    return pages.join("\n");
+  }
+
+  // Word .docx: JSZip 解压 word/document.xml 提取文本
+  async function parseDocx(file) {
+    if (!window.JSZip) {
+      await loadScript("https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js");
+    }
+    const zip = await window.JSZip.loadAsync(await file.arrayBuffer());
+    const xmlFile = zip.file("word/document.xml");
+    if (!xmlFile) throw new Error("docx 中未找到 word/document.xml");
+    let xml = await xmlFile.async("string");
+    xml = xml
+      .replace(/<w:p[^>]*>/g, "\n")
+      .replace(/<w:tab[^>]*\/>/g, "\t")
+      .replace(/<w:br[^>]*\/>/g, "\n")
+      .replace(/<[^>]+>/g, "")
+      .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"').replace(/&apos;/g, "'");
+    return xml.replace(/\n{3,}/g, "\n\n");
+  }
+
+  // 图片: Tesseract.js OCR (中文+英文)，首次会下载语言包
+  async function parseImage(file) {
+    if (!window.Tesseract) {
+      await loadScript("https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js");
+    }
+    const result = await window.Tesseract.recognize(file, "chi_sim+eng");
+    return result.data.text;
+  }
+
+  // Word .doc (老二进制格式): 尽力提取可打印文本
+  async function parseDocLegacy(file) {
+    const u8 = new Uint8Array(await file.arrayBuffer());
+    let text = "";
+    for (let i = 0; i + 1 < u8.length; i++) {
+      if (u8[i + 1] === 0 && u8[i] >= 32 && u8[i] < 127) { text += String.fromCharCode(u8[i]); }
+      else if (u8[i] === 0 && u8[i + 1] >= 32 && u8[i + 1] < 127) { text += String.fromCharCode(u8[i + 1]); i++; }
+    }
+    text = text.replace(/[^\x20-\x7E\n]/g, "");
+    if (text.trim().length < 10) throw new Error(".doc 老格式无法可靠提取，请另存为 .docx 或 PDF 后重试");
+    return text;
   }
 
   // ---- 浏览器端简化参数提取 (复用 pdf_extract.js 规则) ----
@@ -1492,8 +1559,8 @@
     document.querySelectorAll(".nav-item").forEach(b => b.addEventListener("click", () => switchPage(b.dataset.page)));
     $("btnReset").addEventListener("click", () => { resetAll(); revealPage(curPage); });
     $("btnCopy").addEventListener("click", copyCSV);
-    // PDF 导入 & 报告导出
-    $("btnImportPDF").addEventListener("click", handlePDFImport);
+    // 需求导入 & 报告导出
+    $("btnImportReq").addEventListener("click", handleReqImport);
     $("btnExportReport").addEventListener("click", handleExportReport);
     // 弹窗事件
     $("modalClose").addEventListener("click", hideModal);
