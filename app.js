@@ -22,7 +22,7 @@
 	  /* ---------------- 状态 ---------------- */
 	  const state = {
 	    inputs: Object.assign({}, V.inputs),
-	    aux: Object.assign({ coolStrategy: V.coolStrategy || "adaptive", tailCoolFrac: V.tailCoolFrac != null ? V.tailCoolFrac : 0.30 }, V.auxDefault),
+	    aux: Object.assign({ coolStrategy: V.coolStrategy || "adaptive", tailCoolFrac: V.tailCoolFrac != null ? V.tailCoolFrac : 0.30, auxRatio: 1.0 }, V.auxDefault),
 	    deg: V.degRows.map(d => ({ row: d.row, label: d.label, H: d.H, K: d.K })),
 	    aug1: Object.assign({}, V.augDefault), // {row: MWh}
 	    aug2: {},
@@ -377,6 +377,23 @@
 	    });
 	    fracWrap.appendChild(fracSlider); fracWrap.appendChild(fracVal);
 	    ffrac.appendChild(fracWrap); grid.appendChild(ffrac);
+
+	    // 辅耗比例 auxRatio（0=理想无辅耗 / 1=模型100% / >1=保守；引擎内等比缩放全部系统级辅耗）
+	    const fratio = el("div", "field"); fratio.appendChild(el("label", null, "<span>辅耗比例 auxRatio</span><span class='f-unit'>0~2</span>"));
+	    fratio.appendChild(el("div", "f-en", "敏感性分析：等比缩放 E_cycle_sys 与全部 P_*_sys"));
+	    const ratioWrap = el("div", "frac-wrap");
+	    const ratioSlider = el("input"); ratioSlider.type = "range"; ratioSlider.id = "aux-auxRatio";
+	    ratioSlider.min = "0"; ratioSlider.max = "2"; ratioSlider.step = "0.05";
+	    ratioSlider.value = String(state.aux.auxRatio != null ? state.aux.auxRatio : 1.0);
+	    const ratioVal = el("span", "frac-val", String(state.aux.auxRatio != null ? state.aux.auxRatio : 1.0));
+	    ratioSlider.addEventListener("input", () => {
+	      const v = parseFloat(ratioSlider.value);
+	      state.aux.auxRatio = v;
+	      ratioVal.textContent = v.toFixed(2);
+	      recalc();
+	    });
+	    ratioWrap.appendChild(ratioSlider); ratioWrap.appendChild(ratioVal);
+	    fratio.appendChild(ratioWrap); grid.appendChild(fratio);
 
 	    body.appendChild(grid); card.appendChild(body); page.appendChild(card);
 

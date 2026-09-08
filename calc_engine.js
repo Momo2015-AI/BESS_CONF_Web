@@ -72,21 +72,40 @@
   }
 
   // ---- 系统级辅耗 ----
+  // auxRatio（aux.auxRatio，缺省 1.0）= 「辅耗比例调节」总开关，唯一生效点在这里。
+  // 约定：等比缩放【全部】系统级辅耗量 —— 功率 P_*_sys 与单循环电量 E_cycle_sys 同步缩放。
+  //   · 只缩 E_cycle_sys 而不缩 P_dis_sys 会导致 auxRatio→0 时 O ≠ Pno（口径分叉），故必须同步。
+  //   · 严禁在引擎外部（_calc.js / web/app.js / _sim_workflow.js）二次缩放 sys.E_cycle_sys，
+  //     否则 O 列（含辅耗往返效率）拿不到缩放值 → 滑块「拉了没反应」的历史 bug。
+  //   · 原始未缩放值保留在 E_cycle_sys_raw / P_*_sys_raw，供审计与 UI 对照。
   function computeAux(V, inputs, aux) {
     const a = algo(aux.r, aux.T, aux.mode, aux.rest, aux.N, V, aux);
     const nC = inputs.containerCount;
     const pac = acAuxPowers(V, inputs, aux);
+    const ratio = (typeof aux.auxRatio === "number" && isFinite(aux.auxRatio) && aux.auxRatio >= 0)
+      ? aux.auxRatio : 1;
+    const P_chg_raw   = pac.chg  + nC * a.pChg   / 1000;
+    const P_dis_raw   = pac.dis  + nC * a.pDis   / 1000;
+    const P_tailC_raw = pac.tail + nC * a.pTailC / 1000;
+    const P_tailD_raw = pac.tail + nC * a.pTailD / 1000;
+    const P_stby_raw  = pac.stby + nC * a.ps     / 1000;
+    const E_raw = nC * a.Eaux / 1000
+      + pac.chg * a.tAct + pac.tail * a.tTail + pac.stby * a.t3
+      + pac.dis * a.tAct + pac.tail * a.tTail + pac.stby * a.t6;
     return Object.assign({}, a, {
       nC, pac,
-      P_chg_sys:  pac.chg  + nC * a.pChg  / 1000,
-      P_dis_sys:  pac.dis  + nC * a.pDis  / 1000,
-      P_tailC_sys: pac.tail + nC * a.pTailC / 1000,
-      P_tailD_sys: pac.tail + nC * a.pTailD / 1000,
-      P_stby_sys: pac.stby + nC * a.ps    / 1000,
+      auxRatio: ratio,
+      P_chg_sys:   P_chg_raw   * ratio,
+      P_dis_sys:   P_dis_raw   * ratio,
+      P_tailC_sys: P_tailC_raw * ratio,
+      P_tailD_sys: P_tailD_raw * ratio,
+      P_stby_sys:  P_stby_raw  * ratio,
+      P_chg_sys_raw: P_chg_raw, P_dis_sys_raw: P_dis_raw,
+      P_tailC_sys_raw: P_tailC_raw, P_tailD_sys_raw: P_tailD_raw,
+      P_stby_sys_raw: P_stby_raw,
       t_dis: a.tAct,
-      E_cycle_sys: nC * a.Eaux / 1000
-        + pac.chg * a.tAct + pac.tail * a.tTail + pac.stby * a.t3
-        + pac.dis * a.tAct + pac.tail * a.tTail + pac.stby * a.t6
+      E_cycle_sys_raw: E_raw,
+      E_cycle_sys: E_raw * ratio
     });
   }
 
@@ -125,11 +144,15 @@
         // 仿真年限不足的行回退原始衰减表，并标记 srcFallback 供 UI 提示
         // rteOverride 为全局覆盖, 优先级最高: 设置后 K 恒为覆盖值, 不受 sim/raw 影响
         const simR = (rteOv == null) ? (SIM.rte && SIM.rte[0] != null ? SIM.rte[0] : null) : null;
+        // FAT=出厂新电池(H=1.0)；SAT=投运首年，SOH 必须取衰减源 Y0（soh[0]）。
+        // 【契约】G6 双验用同一 soh[0] 复算 AC 可用——SAT 行不得引入 soh[0] 之外的
+        // 魔法数（曾硬编码 0.9925，恰与金基准衰减文件同值才未被 G6 暴露；换衰减
+        // 源后 G6 会以 ~0.75% 偏差误拦正确结果）。无 sim 输入时保留 degRows 表内值。
         if (y.row === 3) {
-          H = 1.0; // FAT = 出厂新电池，H 固定为 1.0
+          H = 1.0; // FAT = 出厂新电池
           if (simR != null) K = simR;
         } else if (y.row === 4) {
-          H = 0.9925; // SAT = 投运首年 (出厂后运输/安装调试损耗)
+          if (SIM.soh && SIM.soh[0] != null) H = SIM.soh[0];
           if (simR != null) K = simR;
         } else {
           const yi = y.row - 4;
@@ -160,11 +183,15 @@
     const I = inputs;
     I.nom = I.containerCount * I.perContainer;
     I.acTotalPower = I.mvSkidCap * I.skidCount;
+    const ratio = (typeof aux.auxRatio === "number" && isFinite(aux.auxRatio) && aux.auxRatio >= 0)
+      ? aux.auxRatio : 1;
     const a0 = algo(aux.r, aux.T, aux.mode, aux.rest, aux.N, V, aux);
-    I.auxDCunit = a0.avgMW;
+    // 与 computeAux 同口径缩放，避免摘要卡片(auxDC/auxAC)与年度表(E_cycle_sys)脱节
+    I.auxDCunit = a0.avgMW * ratio;
     I.auxDC = I.auxDCunit * I.containerCount;
     const pac = acAuxPowers(V, I, aux);
-    I.auxAC = pac.chg;
+    I.auxAC = pac.chg * ratio;
+    I.auxRatio = ratio;
   }
 
   // ---- RTE Stack 五因子损失分解 (命名节能因子) ----
@@ -210,6 +237,35 @@
     return Object.assign({ row: row.row, label: row.label }, decomposeLoss(row, inputs, sys.E_cycle_sys));
   }
 
+  // ---- 回归守卫: auxRatio 必须真正贯通到 O 列 ------------------------------
+  // 历史 bug：auxRatio 只在引擎【外部】缩放 E_cycle_sys，导致 O(含辅耗) 纹丝不动。
+  // 本守卫在每次运行时用 3 个比例跑一遍，任一恒等式/单调性破坏立即抛错。
+  //   ① ratio=0  ⇒ O == Pno（无辅耗时含/不含辅耗效率必须重合）
+  //   ② O 随 ratio 单调递减：O(0) > O(0.5) > O(1)
+  //   ③ Pno 与 ratio 无关（Pno 定义上不含辅耗）
+  //   ④ E_cycle_sys(0.5) == 0.5 × E_cycle_sys(1)
+  function selftestAuxRatio(V) {
+    const run = (ratio) => {
+      const st = createState(V, { aux: { auxRatio: ratio } });
+      derive(V, st.inputs, st.aux);
+      return computeTable(V, st.inputs, st.aux, st.deg, st.aug1, st.aug2, "raw", null);
+    };
+    const t0 = run(0), th = run(0.5), t1 = run(1);
+    const i = Math.min(1, t1.rows.length - 1);          // SAT (Year0) 行
+    const O0 = t0.rows[i].O, Oh = th.rows[i].O, O1 = t1.rows[i].O;
+    const Pno0 = t0.rows[i].Pno, Pno1 = t1.rows[i].Pno;
+    const err = (m) => { throw new Error("[calc_engine] auxRatio 守卫失败: " + m); };
+    if (!(Math.abs(O0 - Pno0) < 1e-9))
+      err(`ratio=0 时 O(${O0.toFixed(6)}) ≠ Pno(${Pno0.toFixed(6)})，辅耗未被完整缩放`);
+    if (!(O1 < Oh && Oh < O0))
+      err(`O 对 auxRatio 非单调: O(0)=${O0.toFixed(6)} O(0.5)=${Oh.toFixed(6)} O(1)=${O1.toFixed(6)}`);
+    if (Math.abs(Pno0 - Pno1) > 1e-12)
+      err("Pno 不应随 auxRatio 变化（其定义不含辅耗）");
+    if (Math.abs(th.sys.E_cycle_sys - 0.5 * t1.sys.E_cycle_sys) > 1e-9)
+      err("E_cycle_sys 未按 auxRatio 线性缩放");
+    return true;
+  }
+
   // ---- 格式化 ----
   function fmt(x, d) {
     d = d || 2;
@@ -252,7 +308,8 @@
     augAdd, computeTable, derive,
     decomposeLoss, lossFactors,
     fmt, fmtPct,
-    createState, calc
+    createState, calc,
+    selftestAuxRatio
   };
 
   // UMD: 浏览器 + Node.js 双环境

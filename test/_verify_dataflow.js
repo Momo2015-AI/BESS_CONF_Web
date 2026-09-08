@@ -66,7 +66,8 @@ console.log("══════════════════════�
   const rows = tbl.rows;
   console.log(`\n[2] sim 模式: 仿真满 25 年 (sim.soh[0]=${sim.soh[0].toFixed(4)}, soh[25]=${sim.soh[25].toFixed(4)})`);
   ok(rows[0].H === 1.0 && near(rows[0].K, sim.rte[0]), "FAT row3: H 固定 1.0, K=sim.rte[0]");
-  ok(rows[1].H === 0.9925 && near(rows[1].K, sim.rte[0]), "SAT row4: H 固定 0.9925, K=sim.rte[0]");
+  // 2026-09-08 引擎契约变更：SAT H 不再硬编码 0.9925，必须取 sim.soh[0]（与 G6 双验同源）
+  ok(near(rows[1].H, sim.soh[0]) && near(rows[1].K, sim.rte[0]), "SAT row4: H=sim.soh[0]（衰减源驱动，非硬编码）, K=sim.rte[0]");
   let yrOk = true;
   for (let i = 2; i < rows.length; i++) {
     const yi = yiOf(i);                 // row5→soh[1], row29→soh[25]
@@ -108,7 +109,8 @@ console.log("══════════════════════�
   const allOvSim = tblSim.rows.every(r => near(r.K, ov));
   ok(allOvRaw, `raw 模式下所有行 K=${ov.toFixed(3)}`);
   ok(allOvSim, `sim 模式下所有行 K=${ov.toFixed(3)} (优先级高于仿真)`);
-  ok(tblSim.rows[0].H === 1.0 && tblSim.rows[1].H === 0.9925, "override 不改变 FAT/SAT 的固定 H");
+  const sim2 = makeSim(25, 1.0, 0.02);
+  ok(tblSim.rows[0].H === 1.0 && near(tblSim.rows[1].H, sim2.soh[0]), "override 不改变 FAT=1.0 / SAT=soh[0]");
 }
 
 /* ---- 5. 全年份 + 物理量完整 ---- */
