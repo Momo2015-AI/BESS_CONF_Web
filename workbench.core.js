@@ -412,8 +412,14 @@
       throw new Error("衰减源 soh/rte 非法（需等长且 >=2 点）");
     var simOut = { soh: soh.slice(), rte: rte.slice() };
     var acEff = rte[0];
-    var V = (typeof window !== "undefined" ? window : globalThis).V12;
-    var ENG = (typeof window !== "undefined" ? window : globalThis).BESS_ENGINE;
+    var root = (typeof window !== "undefined" ? window : globalThis);
+    var CATALOG = root.BESS_CATALOG;
+    var V12 = root.V12;
+    var ENG = root.BESS_ENGINE;
+    var productModel = dig(profile, "ident.productModel");
+    var V = (CATALOG && productModel && CATALOG.products[productModel])
+      ? CATALOG.makeDataView(CATALOG, productModel, V12)
+      : V12;
     function runFor(N) {
       var overrides = {
         inputs: {
@@ -433,15 +439,15 @@
       var sizingRows = [];
       var maxYear = soh.length - 1;
       rows.forEach(function (r) {
-        var yr;
-        if (r.label === "SAT (Year0)") yr = 0;
-        else if (/^\d+$/.test(r.label) && +r.label >= 1 && +r.label <= 25) yr = +r.label;
-        else return;
+        // row3=FAT, row4=Year0, row5=Year1, ... row29=Year25
+        if (r.row < 4) return;
+        var yr = r.row - 4;
         if (yr > maxYear) return;
         var acUsable = computeAcUsable(r.H_avail, I.effDis, I.cable, sys.E_cycle_sys);
         sizingRows.push({ year: yr, soh: r.H, acUsable: acUsable });
       });
       sizingRows.sort(function (a, b) { return a.year - b.year; });
+      if (!sizingRows.length) throw new Error("runCalc: 未能从计算表中识别 Year0..YearN 行");
       return { sizingRows: sizingRows, sys: sys, acUsableBOL: sizingRows[0].acUsable };
     }
     var containerCount;
@@ -526,6 +532,15 @@
     var energy = unwrap(dig(profile, "arch.energyPerContainerMWh"));
     if (isNum(energy) && !(energy > 0.5 && energy < 20))
       errs.push("arch.energyPerContainerMWh = " + energy + " 超出合理区间");
+    var packS = unwrap(dig(profile, "pack.configS"));
+    var clusterS = unwrap(dig(profile, "cluster.configS"));
+    if (isNum(packS) && isNum(clusterS) && packS !== clusterS)
+      errs.push("pack.configS(" + packS + ") ≠ cluster.configS(" + clusterS + ")，产品层级串并联不一致");
+    // 一致性：电芯型号若能在 BDATA 找到则曲线可绑定，未找到给 warning（不拦，允许先占位）
+    var cellModel = unwrap(dig(profile, "cell.model"));
+    var BDATA = (typeof window !== "undefined" ? window : globalThis).BDATA;
+    if (cellModel && BDATA && BDATA.cells && !BDATA.cells[cellModel])
+      warns.push("cell.model=" + cellModel + " 在 BDATA 中无衰减曲线，将回退默认表");
     return { ok: errs.length === 0, errs: errs, warns: warns };
   }
   function gateProject(project) {

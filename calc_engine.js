@@ -181,7 +181,10 @@
   // ---- 派生量 ----
   function derive(V, inputs, aux) {
     const I = inputs;
-    I.nom = I.containerCount * I.perContainer;
+    // 单箱容量优先从产品目录 V 读取；兼容旧 V12（未升级目录时回退 inputs.perContainer）
+    const epc = (V && V.energyPerContainerMWh != null)
+      ? V.energyPerContainerMWh : (I.perContainer != null ? I.perContainer : 5);
+    I.nom = I.containerCount * epc;
     I.acTotalPower = I.mvSkidCap * I.skidCount;
     const ratio = (typeof aux.auxRatio === "number" && isFinite(aux.auxRatio) && aux.auxRatio >= 0)
       ? aux.auxRatio : 1;

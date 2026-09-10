@@ -64,7 +64,7 @@
     // ===== S670 系列（LF702S 大能量电芯 · 6.9MWh 集装箱）====================
     "S670H401": {
       ident: { productModel: "S670H401", productFamily: "container" },
-      cell:  { model: "LF702S", capacityAh: 702, nominalV: 3.2 },
+      cell:  { model: "LF702K", capacityAh: 702, nominalV: 3.2 },
       arch:  {
         clustersPerContainer: 8,
         energyPerContainerMWh: 6.9,
@@ -124,7 +124,7 @@
     // ===== S670H201（同族小倍率版本 · LF702S · 6.9MWh · 0.20P）==============
     "S670H201": {
       ident: { productModel: "S670H201", productFamily: "container" },
-      cell:  { model: "LF702S", capacityAh: 702, nominalV: 3.2 },
+      cell:  { model: "LF702K", capacityAh: 702, nominalV: 3.2 },
       arch:  {
         clustersPerContainer: 8,
         energyPerContainerMWh: 6.9,
@@ -144,6 +144,30 @@
     // 新 SKU 在此登记；或经 UI 导入完整 profile.json（技能库格式）
   };
 
+  // ---- 衰减曲线：按电芯型号从 BDATA 取默认曲线 ----------------------
+  // 返回与 degRows 同构的 {row,label,H,K} 数组；未命中时返回 null
+  function resolveDecayCurve(cellModel) {
+    var BDATA = (typeof window !== "undefined" && window.BDATA) || (typeof global !== "undefined" && global.BDATA);
+    if (!BDATA || !BDATA.cells || !BDATA.cells[cellModel]) return null;
+    var cv = BDATA.cells[cellModel][0];
+    if (!cv || !cv.points) return null;
+    var base = cv.points[0].soh != null ? cv.points[0].soh : 1.0;
+    var rows = cv.points.map(function (pt, idx) {
+      return {
+        row: idx + 3,
+        label: pt.y === 0 ? "FAT" : (pt.y === 0.5 ? "SAT" : ("Y" + Math.floor(pt.y))),
+        H: pt.soh != null ? pt.soh : 1.0,
+        K: pt.rte != null ? pt.rte : null
+      };
+    });
+    // 补齐到 25 年：若原始数据只到 20 年，用 M5 多项式外推最后一点
+    var last = rows[rows.length - 1];
+    for (var y = Math.ceil(cv.points[cv.points.length - 1].y) + 1; y <= 25; y++) {
+      rows.push({ row: y + 3, label: "Y" + (y - 1), H: last.H, K: last.K });
+    }
+    return { curve: cv, rows: rows, source: "cell-" + cellModel };
+  }
+
   // ---- 数据视图：SKU → 引擎可消费的 V ------------------------------
   function makeDataView(catalog, productId, baseV) {
     var cat = catalog || API;
@@ -153,10 +177,25 @@
     if (!aux) throw new Error("catalog: product " + productId +
       " references unknown auxMatrixId " + sku.auxMatrixId);
     // baseV = legacy window.V12（提供 inputs/degRows/augDefault 等非产品域默认）。
+    var decay = resolveDecayCurve(sku.cell.model);
     var view = Object.assign({}, baseV || {}, {
       M: aux.M, Tgrid: aux.Tgrid, Rgrid: aux.Rgrid, STBY: aux.STBY,
       auxMatrixId: sku.auxMatrixId,
-      rOptions: aux.Rgrid.slice(), tOptions: aux.Tgrid.slice()
+      rOptions: aux.Rgrid.slice(), tOptions: aux.Tgrid.slice(),
+      // 产品固定量（单一数据源）
+      productModel: sku.ident.productModel,
+      productFamily: sku.ident.productFamily,
+      cellModel: sku.cell.model,
+      cellCapacityAh: sku.cell.capacityAh,
+      cellNominalV: sku.cell.nominalV,
+      clustersPerContainer: sku.arch.clustersPerContainer,
+      energyPerContainerMWh: sku.arch.energyPerContainerMWh,
+      durationH: sku.arch.durationH,
+      rateP: sku.arch.rateP,
+      // 默认衰减表：优先按电芯型号绑定；未命中时回退 baseV
+      degRows: decay ? decay.rows : (baseV && baseV.degRows),
+      degSource: decay ? decay.source : "fallback-baseV",
+      auxMatrixNote: sku.auxMatrixNote
     });
     return view;
   }

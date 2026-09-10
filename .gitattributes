@@ -1,0 +1,12 @@
+# Normalize all text sources to LF on commit; protect binary assets.
+* text=auto eol=lf
+*.pptx binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary

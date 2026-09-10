@@ -28,10 +28,12 @@
 	    state.product = skuId;
 	    try { localStorage.setItem("bess.sku", skuId); } catch (e) {}
 	    V = makeV();
-	    // 产品域派生默认值随 SKU 刷新（箱容/倍率选项来自视图）
-	    state.inputs.perContainer = CATALOG.products[skuId].arch.energyPerContainerMWh;
-	    state.catalogLocked = state.catalogLocked || {};
-	    state.catalogLocked.perContainer = true;  // 目录值锁定：只读，点击解锁图标可手动覆盖
+	    // 产品固定量写入 V；state.inputs 只保留镜像/展示，引擎优先读取 V
+	    state.inputs.perContainer = V.energyPerContainerMWh;
+	    state.aux.r = V.rateP;
+	    state.deg = V.degRows.map(d => ({ row: d.row, label: d.label, H: d.H, K: d.K }));
+	    // 一致性提示：若电芯无库曲线，UI 可见 degSource
+	    state.degSource = V.degSource;
 	    renderAll();
 	    tagReveal(); revealPage("inputs");
 	    recalc();
@@ -50,17 +52,18 @@
 
 
 	  /* ---------------- 状态 ---------------- */
-	  const state = {
-	    product: _skuId,               // 产品域：当前 SKU（只读目录，切换走 setProduct）
-	    inputs: Object.assign({}, V.inputs),
-	    aux: Object.assign({ coolStrategy: V.coolStrategy || "adaptive", tailCoolFrac: V.tailCoolFrac != null ? V.tailCoolFrac : 0.30, auxRatio: 1.0 }, V.auxDefault),
-	    deg: V.degRows.map(d => ({ row: d.row, label: d.label, H: d.H, K: d.K })),
-	    aug1: Object.assign({}, V.augDefault), // {row: MWh}
-	    aug2: {},
-	    links: Object.assign({}, V.linksDefault), // AC↔DC 联动开关
-	    sohSrc: "raw",                 // "raw"=用手工数据表 / "sim"=用仿真输出(__SIMOUT)
-	    catalogLocked: {}              // { perContainer: true/false } — 哪些字段来自目录锁定（只读，可手动解锁）
-	  };
+  const state = {
+    product: _skuId,               // 产品域：当前 SKU（只读目录，切换走 setProduct）
+    inputs: Object.assign({}, V.inputs, { perContainer: V.energyPerContainerMWh }),
+    aux: Object.assign({ coolStrategy: V.coolStrategy || "adaptive", tailCoolFrac: V.tailCoolFrac != null ? V.tailCoolFrac : 0.30, auxRatio: 1.0, r: V.rateP }, V.auxDefault),
+    deg: V.degRows.map(d => ({ row: d.row, label: d.label, H: d.H, K: d.K })),
+    degSource: V.degSource,
+    aug1: Object.assign({}, V.augDefault), // {row: MWh}
+    aug2: {},
+    links: Object.assign({}, V.linksDefault), // AC↔DC 联动开关
+    sohSrc: "raw",                 // "raw"=用手工数据表 / "sim"=用仿真输出(__SIMOUT)
+    catalogLocked: {}              // 保留字段兼容，但目录固定量结构性只读
+  };
   // 派生量(运行时计算)
   state.inputs.auxAC = 0; state.inputs.nom = 0;
   state.inputs.auxDCunit = 0; state.inputs.auxDC = 0;
@@ -115,7 +118,7 @@
       { k: "cable", cn: "直流电缆效率", en: "Cables efficiency (DC)", unit: "%", edit: true, pct: true },
       { k: "nom", cn: "铭牌装机容量", en: "Nominal installed energy", unit: "MWh", derive: "nom", note: "= 数量×单箱 (D18)" },
       { k: "containerCount", cn: "电池集装箱数量", en: "No. of container", unit: "Set", edit: true },
-      { k: "perContainer", cn: "单箱容量", en: "Energy per container", unit: "MWh", edit: true },
+      { k: "perContainer", cn: "单箱容量", en: "Energy per container", unit: "MWh", edit: false, note: "= 产品目录固定值，切换 SKU 自动更新" },
       { k: "auxDCunit", cn: "单箱辅耗 (实测环均)", en: "DC Aux per container", unit: "MW", derive: "auxDCunit", note: "= 辅耗页算法 (D21)" },
       { k: "auxDC", cn: "系统直流辅耗合计", en: "DC Aux total", unit: "MW", derive: "auxDC", note: "= 单箱×数量 (D22)" }
     ]}
@@ -1695,7 +1698,7 @@
     var profile = {
       ident:   { productModel: sku.ident.productModel, sourceChain: ["catalog:" + sku.ident.productModel] },
       cell:    { model: sku.cell.model, capacityAh: sku.cell.capacityAh, nominalV: sku.cell.nominalV },
-      pack:    { model: sku.pack ? sku.pack.model : sku.ident.productModel + "-PACK", configS: 8 },
+      pack:    { model: sku.pack ? sku.pack.model : sku.ident.productModel + "-PACK", configS: sku.arch.clustersPerContainer },
       cluster: { model: sku.cluster ? sku.cluster.model : sku.ident.productModel + "-CLUSTER", configS: sku.arch.clustersPerContainer },
       container: { model: sku.ident.productModel },
       arch:    {
