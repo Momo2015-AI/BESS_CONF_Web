@@ -5,29 +5,61 @@
  * ========================================================================= */
 	(function () {
 	  "use strict";
-	  const V = window.V12;
 	  const ENG = window.BESS_ENGINE;
 	  if (!ENG) { console.error("BESS_ENGINE 未加载，请确认 calc_engine.js 存在"); }
+	  const CATALOG = window.BESS_CATALOG;
+	  if (!CATALOG) { console.error("BESS_CATALOG 未加载，请确认 catalog.js 在 data.js 之前引入"); }
 
-  /* ---------------- SVG 图标库（线条风格, 1.75px, 24×24 viewBox） ---------------- */
-  const ICONS = {
-    chev:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>',
-    link:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07.07l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"/><path d="M14 11a5 5 0 0 0-7.07-.07l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"/></svg>',
-    unlink:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.84 12.61a4 4 0 0 0-5.66-5.66l-1.41 1.41"/><path d="M5.16 11.39a4 4 0 0 0 5.66 5.66l1.41-1.41"/><line x1="3" y1="3" x2="21" y2="21"/></svg>',
-    check:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
-    refresh: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3.51-7.12"/><polyline points="21 3 21 9 15 9"/></svg>'
-  };
+	  /* ---------------- 产品域（v3.0 P0）：SKU → 数据视图 ----------------
+	   * V 不再是全局唯一：改由「当前 SKU」经 catalog.makeDataView 构造。
+	   * 引擎消费的所有 V.* 点位自动路由到视图；换 SKU = 换矩阵/网格资产，
+	   * 引擎零改动。localStorage 持久化当前 SKU。 */
+	  const _catalogKeys = Object.keys(CATALOG.products);
+	  const DEFAULT_SKU = _catalogKeys.length > 0 ? _catalogKeys[0] : "S670H401";
+	  let _skuId = null;
+	  try { _skuId = localStorage.getItem("bess.sku") || DEFAULT_SKU; } catch (e) { _skuId = DEFAULT_SKU; }
+	  if (!CATALOG.products[_skuId]) _skuId = DEFAULT_SKU;
+	  function makeV() { return CATALOG.makeDataView(CATALOG, _skuId, window.V12); }
+	  // V 为 getter：所有既有 V.* 消费点自动吃当前 SKU 视图（含目录默认兜底）
+	  let V = makeV();
+	  function setProduct(skuId) {
+	    if (!CATALOG.products[skuId]) throw new Error("未知产品: " + skuId);
+	    _skuId = skuId;
+	    state.product = skuId;
+	    try { localStorage.setItem("bess.sku", skuId); } catch (e) {}
+	    V = makeV();
+	    // 产品域派生默认值随 SKU 刷新（箱容/倍率选项来自视图）
+	    state.inputs.perContainer = CATALOG.products[skuId].arch.energyPerContainerMWh;
+	    state.catalogLocked = state.catalogLocked || {};
+	    state.catalogLocked.perContainer = true;  // 目录值锁定：只读，点击解锁图标可手动覆盖
+	    renderAll();
+	    tagReveal(); revealPage("inputs");
+	    recalc();
+	  }
+	  window.__BESS_SET_PRODUCT = setProduct;   // 控制台/测试入口
+	  window.__BESS_SKU = function () { return _skuId; };
+
+	  /* ---------------- SVG 图标库（线条风格, 1.75px, 24×24 viewBox） ---------------- */
+	  const ICONS = {
+	    chev:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>',
+	    link:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07.07l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"/><path d="M14 11a5 5 0 0 0-7.07-.07l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"/></svg>',
+	    unlink:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="3" x2="21" y2="21"/></svg>',
+	    check:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+	    refresh: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3.51-7.12"/><polyline points="21 3 21 9 15 9"/></svg>'
+	  };
 
 
 	  /* ---------------- 状态 ---------------- */
 	  const state = {
+	    product: _skuId,               // 产品域：当前 SKU（只读目录，切换走 setProduct）
 	    inputs: Object.assign({}, V.inputs),
 	    aux: Object.assign({ coolStrategy: V.coolStrategy || "adaptive", tailCoolFrac: V.tailCoolFrac != null ? V.tailCoolFrac : 0.30, auxRatio: 1.0 }, V.auxDefault),
 	    deg: V.degRows.map(d => ({ row: d.row, label: d.label, H: d.H, K: d.K })),
 	    aug1: Object.assign({}, V.augDefault), // {row: MWh}
 	    aug2: {},
 	    links: Object.assign({}, V.linksDefault), // AC↔DC 联动开关
-	    sohSrc: "raw" // "raw"=用手工数据表 / "sim"=用仿真输出(__SIMOUT)
+	    sohSrc: "raw",                 // "raw"=用手工数据表 / "sim"=用仿真输出(__SIMOUT)
+	    catalogLocked: {}              // { perContainer: true/false } — 哪些字段来自目录锁定（只读，可手动解锁）
 	  };
   // 派生量(运行时计算)
   state.inputs.auxAC = 0; state.inputs.nom = 0;
@@ -92,6 +124,40 @@
   function renderInputs() {
     const page = $("page-inputs");
     page.innerHTML = "";
+    // ---- 产品选型卡（v3.0 P0）：SKU 目录切换，方案侧零代码改动 ----
+    {
+      const card = el("div", "section-card reveal");
+      const head = el("div", "section-head");
+      head.appendChild(el("span", "sh-dot"));
+      head.appendChild(el("h2", null, "产品选型 · Product SKU"));
+      const sku = CATALOG.products[state.product] || CATALOG.products[DEFAULT_SKU];
+      head.appendChild(el("span", "sh-en",
+        "单箱 " + sku.arch.energyPerContainerMWh + " MWh / " +
+        sku.arch.clustersPerContainer + " 簇 / 辅耗矩阵 " + sku.auxMatrixId));
+      card.appendChild(head);
+      const body = el("div", "section-body");
+      const fieldWrap = el("div", "field");
+      const fieldLbl = el("label");
+      fieldLbl.appendChild(el("span", null, "当前产品 · Current SKU"));
+      fieldLbl.appendChild(el("span", "f-unit", ""));
+      fieldWrap.appendChild(fieldLbl);
+      const sel = el("select", "dd-sel"); sel.id = "sku-select";
+      Object.keys(CATALOG.products).forEach(id => {
+        const op = el("option"); op.value = id;
+        op.textContent = id + " · " + CATALOG.products[id].arch.energyPerContainerMWh + " MWh/箱";
+        sel.appendChild(op);
+      });
+      sel.value = state.product;
+      sel.addEventListener("change", () => {
+        try { setProduct(sel.value); }
+        catch (e) { alert("切换产品失败: " + e.message); sel.value = state.product; }
+      });
+      fieldWrap.appendChild(sel);
+      body.appendChild(fieldWrap);
+      const note = el("p", "muted", "产品目录只读（catalog.js）；换产品自动切换辅耗矩阵/网格资产与箱容默认值，计算引擎零改动。" + (sku.auxMatrixNote ? " 注：" + sku.auxMatrixNote : ""));
+      body.appendChild(note);
+      card.appendChild(body); page.appendChild(card);
+    }
     inputGroups.forEach(g => {
       const card = el("div", "section-card reveal");
       const head = el("div", "section-head");
@@ -102,10 +168,27 @@
       const body = el("div", "section-body");
       const grid = el("div", "form-grid");
       g.fields.forEach(f => {
-        const field = el("div", "field" + (f.edit || f.link ? "" : " locked") + (f.link ? " linked-field" : ""));
+        const isCatalogLocked = state.catalogLocked && state.catalogLocked[f.k];
+        const fieldCls = "field"
+          + (f.edit || f.link ? "" : " locked")
+          + (f.link ? " linked-field" : "")
+          + (isCatalogLocked ? " catalog-locked" : "");
+        const field = el("div", fieldCls);
         const lab = el("label");
         lab.appendChild(el("span", null, f.cn));
         lab.appendChild(el("span", "f-unit", f.unit));
+        // 目录锁定字段加解锁按钮
+        if (isCatalogLocked) {
+          const lockBtn = el("button", "catalog-lock-btn", "🔒");
+          lockBtn.type = "button";
+          lockBtn.title = "点击解锁，手动覆盖目录值";
+          lockBtn.addEventListener("click", () => {
+            if (!state.catalogLocked) state.catalogLocked = {};
+            state.catalogLocked[f.k] = false;
+            renderAll(); recalc();
+          });
+          lab.appendChild(lockBtn);
+        }
         field.appendChild(lab);
         // 英文名一行；联动字段在同一行右侧放锁链开关
         if (f.link) {
@@ -123,6 +206,10 @@
         let input;
         if (f.derive) {
           input = el("input"); input.readOnly = true; input.id = "inp-" + f.k;
+        } else if (isCatalogLocked) {
+          // 目录锁定：只读，点 🔒 解锁
+          input = el("input"); input.readOnly = true; input.id = "inp-" + f.k;
+          input.value = f.pct ? (state.inputs[f.k] * 100) : state.inputs[f.k];
         } else if (f.edit) {
           input = el("input"); input.type = "number"; input.step = "any"; input.id = "inp-" + f.k;
           input.value = (f.allowEmpty && state.inputs[f.k] === "") ? "" : (f.pct ? (state.inputs[f.k] * 100) : state.inputs[f.k]);
@@ -1165,10 +1252,14 @@
   function resetAll() {
     state.inputs = Object.assign({}, V.inputs);
     state.inputs.auxAC = 0; state.inputs.nom = 0; state.inputs.auxDCunit = 0; state.inputs.auxDC = 0;
-    state.aux = Object.assign({}, V.auxDefault);
+    state.aux = Object.assign({ coolStrategy: V.coolStrategy || "adaptive", tailCoolFrac: V.tailCoolFrac != null ? V.tailCoolFrac : 0.30, auxRatio: 1.0 }, V.auxDefault);
     state.deg = V.degRows.map(d => ({ row: d.row, label: d.label, H: d.H, K: d.K }));
     state.aug1 = Object.assign({}, V.augDefault); state.aug2 = {};
     state.links = Object.assign({}, V.linksDefault);
+    // 重置时恢复目录锁定
+    if (!state.catalogLocked) state.catalogLocked = {};
+    state.catalogLocked.perContainer = true;
+    state.inputs.perContainer = CATALOG.products[state.product].arch.energyPerContainerMWh;
     renderAll(); recalc();
   }
 
@@ -1566,8 +1657,175 @@
     alert("已下载:\n• BESS_计算表.csv — 全站配置计算表\n• BESS_params.json — 参数文件");
   }
 
+  // ---------------- 闸门式 PPT 导出（G0–G6） -----------------------------
+  var __PPT_STATE = { ok: false, result: null, sha: null, values: null };
+  function handleExportPptx() {
+    if (!window.JSZip) { alert("JSZip 未加载，无法生成 PPT"); return; }
+    if (!window.BESS_WEB_CORE) { alert("workbench.core.js 未加载"); return; }
+    var core = window.BESS_WEB_CORE;
+    // 构建 project / profile / deg 快照（从当前 state 推导）
+    var S = state;
+    var project = {
+      ident: { productName: "BESS", projectName: "BESS-Configurator" },
+      requirement: {
+        powerMW:       { value: S.inputs.reqP,    status: "user-confirmed" },
+        energyMWh:     { value: S.inputs.epoc,    status: "user-confirmed" },
+        rateP:         { value: S.aux.r,          status: "user-confirmed" },
+        cyclesPerDay:  { value: S.aux.N,          status: "user-confirmed" },
+        dod:           { value: S.inputs.dod,     status: "user-confirmed" },
+        warrantyYears: { value: 5,                status: "user-confirmed" },
+        designLifeYears: { value: 20,             status: "user-confirmed" },
+        communication: { value: "Modbus TCP/RTU, CAN", status: "user-confirmed" },
+        application:   "Utility BESS",
+        supplyScope:   "20ft HC container"
+      },
+      systemAssumptions: {
+        effChg:     { value: S.inputs.effChg, status: "user-confirmed" },
+        effDis:     { value: S.inputs.effDis, status: "user-confirmed" },
+        cable:      { value: S.inputs.cable,  status: "user-confirmed" },
+        transformer:{ value: 0.99,            status: "user-confirmed" },
+        auxModel:   { T: S.aux.T, r: S.aux.r, N: S.aux.N, mode: S.aux.mode }
+      },
+      systemConfig: {
+        corrosionClass: { value: "C5-M", status: "user-confirmed" },
+        pcsMvaPerContainer: { value: S.inputs.mvSkidCap, status: "user-confirmed" }
+      }
+    };
+    var sku = CATALOG.products[S.product] || CATALOG.products[Object.keys(CATALOG.products)[0]];
+    var profile = {
+      ident:   { productModel: sku.ident.productModel, sourceChain: ["catalog:" + sku.ident.productModel] },
+      cell:    { model: sku.cell.model, capacityAh: sku.cell.capacityAh, nominalV: sku.cell.nominalV },
+      pack:    { model: sku.pack ? sku.pack.model : sku.ident.productModel + "-PACK", configS: 8 },
+      cluster: { model: sku.cluster ? sku.cluster.model : sku.ident.productModel + "-CLUSTER", configS: sku.arch.clustersPerContainer },
+      container: { model: sku.ident.productModel },
+      arch:    {
+        clustersPerContainer: sku.arch.clustersPerContainer,
+        energyPerContainerMWh: sku.arch.energyPerContainerMWh,
+        durationH: sku.arch.durationH,
+        rateP: sku.arch.rateP,
+        pcsMvaPerContainer: { value: sku.arch.pcsMvaPerContainer || (sku.arch.energyPerContainerMWh * sku.arch.rateP) }
+      },
+      capabilities: {
+        applications: sku.capabilities.applications || ["Utility BESS"],
+        supplyScope: sku.capabilities.supplyScope || "20ft HC container"
+      },
+      auxMatrix: { matrixId: sku.auxMatrixId || "AUX-5MWH-STD", source: "catalog" },
+      boilerplate: { warranty: sku.boilerplate && sku.boilerplate.warranty, certNote: sku.boilerplate && sku.boilerplate.certNote },
+      systemAssumptions: {
+        effChg: S.inputs.effChg, effDis: S.inputs.effDis, cable: S.inputs.cable,
+        acAuxNoLoad: 0.003125
+      },
+      degradation: { soh: S.deg.map(d => d.H), rte: S.deg.map(d => d.K), cellModel: sku.cell.model }
+    };
+    var deg = {
+      cellModel: sku.cell.model,
+      soh: S.deg.map(d => d.H),
+      rte: S.deg.map(d => d.K),
+      source: "manual-input"
+    };
+
+    // ---- 闸门链 ----
+    var GATE_SEQ = [
+      { id:"lint", name:"G0-lint",         fn:function(){ return core.gates.lintInputs(profile, project, deg); }},
+      { id:"G0",   name:"G0 产品契约",      fn:function(){ return core.gates.G0(profile); }},
+      { id:"G1",   name:"G1 项目契约",      fn:function(){ return core.gates.G1(project); }},
+      { id:"G2",   name:"G2 ASK-USER",     fn:function(){ return core.gates.G2(project, profile); }},
+      { id:"G3",   name:"G3 衰减装载",      fn:function(){ return core.gates.G3(deg, profile, project); }},
+    ];
+    for (var gi = 0; gi < GATE_SEQ.length; gi++) {
+      var gr = GATE_SEQ[gi].fn();
+      if (!gr.ok) { alert("闸门拦截 [" + GATE_SEQ[gi].name + "]\n" + gr.errs.join("\n")); return; }
+    }
+
+    // S4 引擎直算
+    var result;
+    try { result = core.runCalc(project, profile, deg); }
+    catch (e) { alert("引擎计算失败: " + e.message); return; }
+    var sha = core.stampResult(result, project, profile, deg);
+
+    // G4
+    var g4 = core.gates.G4(sha, profile, project, core.inputsSha(project, profile, deg));
+    if (!g4.ok) { alert("G4 物理合理拦截:\n" + g4.errs.join("\n")); return; }
+
+    // S5 占位符求值
+    var fakePh = {};
+    Object.keys(core.FILL_MAP).forEach(function (k) { if (k.charAt(0) !== "_") fakePh[k] = 1; });
+    var ctx = new core.Ctx(profile, project, result, deg);
+    var ev = ctx.computeValues(fakePh);
+    if (ev.missingMap.length || ev.manual.length || ev.empty.length) {
+      var msgs = [];
+      if (ev.missingMap.length) msgs.push("映射缺失: " + ev.missingMap.join(", "));
+      if (ev.manual.length) msgs.push("需人工: " + ev.manual.length);
+      if (ev.empty.length) msgs.push("必填空: " + ev.empty.join(", "));
+      alert("S5 占位符求值失败:\n" + msgs.join("\n"));
+      return;
+    }
+
+    // G6
+    var g6 = core.gates.G6(sha, project, profile, deg);
+    if (!g6.ok) { alert("G6 双验拦截:\n" + g6.errs.join("\n")); return; }
+
+    __PPT_STATE = { ok: true, result: result, sha: sha, values: ev.values };
+
+    // ---- 加载骨架并填充 ----
+    var btn = $("btnExportPptx");
+    var origText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = "加载中骨架…";
+    fetch("skeleton.pptx")
+      .then(function (r) { return r.arrayBuffer(); })
+      .then(function (buf) { return window.JSZip.loadAsync(buf); })
+      .then(function (zin) {
+        var out = new window.JSZip();
+        var chain = Promise.resolve();
+        var repCount = 0;
+        var slideRe = /^ppt\/slides\/slide\d+\.xml$/;
+        var names = Object.keys(zin.files);
+        names.forEach(function (name) {
+          chain = chain.then(function () {
+            return zin.files[name].async("string").then(function (txt) {
+              if (slideRe.test(name)) {
+                var before = (txt.match(/\{\{[A-Z0-9_]+\}\}/g) || []).length;
+                var filled = core.fillXml(txt, ev.values);
+                var after = (filled.match(/\{\{[A-Z0-9_]+\}\}/g) || []).length;
+                repCount += (before - after);
+                // G5 残留检查
+                var g5 = core.gates.G5([filled], profile, sha);
+                if (!g5.ok) throw new Error("G5 拦截 @ " + name + ": " + g5.errs.join("; "));
+                return out.file(name, filled);
+              }
+              return out.file(name, txt);
+            });
+          });
+        });
+        return chain.then(function () {
+          return out.generateAsync({
+            type: "blob", compression: "DEFLATE", compressionOptions: { level: 9 },
+            mimeType: "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+          });
+        });
+      })
+      .then(function (blob) {
+        var base = "BESS_Proposal_" + result.containerCount + "柜";
+        var a = document.createElement("a");
+        a.href = URL.createObjectURL(blob); a.download = base + ".pptx"; a.click();
+        URL.revokeObjectURL(a.href);
+        btn.innerHTML = origText; btn.disabled = false;
+        alert("✓ 方案 PPT 已生成\n柜数: " + result.containerCount +
+              "\nDC: " + result.nomDC.toFixed(2) + " MWh\nAC: " + result.acUsableBOL.toFixed(2) + " MWh\n替换 " + repCount + " 处占位符");
+      })
+      .catch(function (e) {
+        btn.innerHTML = origText; btn.disabled = false;
+        alert("✗ PPT 生成失败: " + e.message);
+      });
+  }
+
   function init() {
-    document.documentElement.classList.add("anim");   // 仅在 JS 可用时启用入场动画, 默认内容可见
+    document.documentElement.classList.add("anim");
+    // 初始化产品域锁定状态：当前 SKU 的单箱容量来自目录，只读
+    if (!state.catalogLocked) state.catalogLocked = {};
+    state.catalogLocked.perContainer = true;
+    state.inputs.perContainer = CATALOG.products[state.product].arch.energyPerContainerMWh;
     renderAll();
     recalc();
     revealPage("inputs");
@@ -1579,6 +1837,7 @@
     // 需求导入 & 报告导出
     $("btnImportReq").addEventListener("click", handleReqImport);
     $("btnExportReport").addEventListener("click", handleExportReport);
+    $("btnExportPptx").addEventListener("click", handleExportPptx);
     // 弹窗事件
     $("modalClose").addEventListener("click", hideModal);
     $("modalCancel").addEventListener("click", hideModal);

@@ -732,3 +732,25 @@ table.matrix td.interp { background: var(--accent-soft); color: var(--accent-ink
   .modal-grid { grid-template-columns: 1fr; }
   .modal-container { width: 98vw; max-height: 92vh; }
 }
+/* 产品目录锁定字段：值来自 catalog，只读；点击解锁图标可手动覆盖 */
+.field.catalog-locked { position: relative; }
+.field.catalog-locked label .f-unit::after {
+  content: " · 目录值";
+  font-size: 9.5px;
+  color: var(--muted);
+  opacity: .7;
+  margin-left: 4px;
+}
+.catalog-lock-btn {
+  position: absolute; top: 2px; right: 2px;
+  background: none; border: none; cursor: pointer;
+  color: var(--muted); padding: 2px 4px; border-radius: 4px; line-height: 1;
+  font-size: 13px; opacity: .5; transition: opacity .15s, color .15s;
+}
+.catalog-lock-btn:hover { opacity: 1; color: var(--blue); }
+.catalog-locked .catalog-lock-btn { opacity: 1; color: var(--amber); }
+.catalog-locked .catalog-lock-btn:hover { color: var(--blue); }
+.catalog-unlocked-badge {
+  font-size: 9px; color: var(--amber); font-weight: 600; margin-left: 4px;
+  letter-spacing: .02em;
+}

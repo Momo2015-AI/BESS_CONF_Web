@@ -6,18 +6,33 @@
 window.V12 = (function () {
   "use strict";
 
-  // ---- 辅耗功率矩阵 (实测 5MWh 集装箱 6 步循环) ----
-  // 行序: 倍率 r = [0.25, 0.33, 0.5]; 列序: 温度 T = [-20, 0, 25, 35, 45]
-  const M = {
-    chg:   [[7.1, 11.2, 12.5, 13.8, 18.8], [10.2, 19.6, 21.0, 26.7, 32.0], [11.3, 27.3, 32.5, 33.0, 34.0]],
-    tailC: [[8.0, 12.5, 14.0, 15.5, 21.1], [9.7, 18.7, 20.0, 25.5, 30.0], [9.7, 23.5, 28.0, 32.0, 33.0]],
-    dis:   [[4.7, 7.4, 8.3, 9.1, 12.4], [6.0, 11.5, 12.3, 15.7, 20.0], [9.6, 23.1, 27.5, 33.0, 34.0]],
-    tailD: [[9.1, 14.3, 16.0, 17.7, 24.1], [9.5, 18.2, 19.5, 24.8, 30.0], [7.6, 18.5, 22.0, 32.0, 33.0]]
-  };
-
-  const Tgrid = [-20, 0, 25, 35, 45];
-  const Rgrid = [0.25, 0.33, 0.5];
-  const STBY = { "1.0": 1.0, "4.2": 4.2 }; // 待机模式: 标准待机 / 液冷自循环
+  // ---- 辅耗功率矩阵：2026-09-08 起资产化到 catalog.js（按产品族 keyed）----
+  // V12.M/Tgrid/Rgrid/STBY 保留为「默认资产视图」引用（向后兼容旧调用方），
+  // 产品级视图请用 BESS_CATALOG.makeDataView(catalog, productId) 构造。
+  // 三环境作用域统一：①浏览器 <script> → 全局标识符 ②Node require → module.exports
+  // ③Node eval（测试场景）→ catalog 把 API 赋到 window.BESS_CATALOG，但裸标识符
+  //   在 eval 作用域不可见 → 这里同时检查 typeof/window/globalThis 三个落点。
+  let _aux = (typeof BESS_CATALOG !== "undefined") ? BESS_CATALOG
+           : (typeof window !== "undefined" && window.BESS_CATALOG) ? window.BESS_CATALOG
+           : (typeof globalThis !== "undefined" && globalThis.BESS_CATALOG) ? globalThis.BESS_CATALOG
+           : null;
+  if (!_aux) {
+    try { _aux = require("./catalog.js"); }
+    catch (e) {
+      const _p = (typeof __dirname !== "undefined" ? __dirname : "");
+      const _f = _p && (function(){ try { return require("fs").readFileSync(require("path").join(_p, "catalog.js"), "utf8"); } catch (_) { return null; } })();
+      if (!_f) throw new Error("catalog.js not found; load catalog.js before data.js");
+      const _scope = {};
+      (new Function("module", "exports", "window", "global", _f))( {exports:_scope}, _scope, window, global);
+      _aux = _scope.BESS_CATALOG || _aux;
+    }
+  }
+  const _std = _aux && _aux.auxMatrices["AUX-5MWH-STD"];
+  if (!_std) throw new Error("catalog.js loaded but AUX-5MWH-STD missing — data corrupted");
+  const M = _std.M;
+  const Tgrid = _std.Tgrid;
+  const Rgrid = _std.Rgrid;
+  const STBY = _std.STBY;
 
   // ---- 输入参数默认值 (对齐 Inputs 页 D 列) ----
   const inputs = {

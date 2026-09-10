@@ -10,6 +10,7 @@
 const path = require("path");
 global.window = global;                    // data.js 以 window.V12 暴露, Node 下注入
 const ENG = require(path.join(__dirname, "..", "calc_engine.js"));
+require(path.join(__dirname, "..", "catalog.js"));
 require(path.join(__dirname, "..", "data.js"));
 const DATA = global.V12;                   // { M, Tgrid, Rgrid, STBY, inputs, degRows, augDefault }
 

@@ -3,10 +3,11 @@ const fs = require("fs");
 const path = require("path");
 const ROOT = path.join(__dirname, "..");
 
-// --- 载入 V12 数据源 ---
+// --- 载入 V12 数据源（catalog.js 先行，同浏览器加载序）---
+const catCode = fs.readFileSync(path.join(ROOT, "catalog.js"), "utf8");
 const dataCode = fs.readFileSync(path.join(ROOT, "data.js"), "utf8");
 global.window = {};
-eval(dataCode);
+eval(catCode + "\n" + dataCode);
 const V = global.window.V12;
 
 // --- 载入引擎 (Node module.exports) ---

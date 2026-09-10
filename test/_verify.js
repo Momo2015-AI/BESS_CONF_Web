@@ -4,10 +4,11 @@
 const fs = require("fs");
 const path = require("path");
 
-// --- 载入 data.js (window.V12) ---
+// --- 载入 catalog.js + data.js (window.BESS_CATALOG / window.V12) ---
+const catCode = fs.readFileSync(path.join(__dirname, "..", "catalog.js"), "utf8");
 const code = fs.readFileSync(path.join(__dirname, "..", "data.js"), "utf8");
 global.window = {};
-const V = (function () { eval(code); return global.window.V12; })();
+const V = (function () { eval(catCode + "\n" + code); return global.window.V12; })();
 
 // --- 直接复用生产引擎（与浏览器 / 计算表同一份代码，避免逻辑分叉）---
 const ENG = require(path.join(__dirname, "..", "calc_engine.js"));

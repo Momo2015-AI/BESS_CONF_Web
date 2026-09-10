@@ -1,8 +1,2 @@
-# OS / editor
-.DS_Store
-Thumbs.db
-desktop.ini
-
-# Local backups / generated test output
-*.bak
-*.out
+node_modules/*
+package-lock.json
